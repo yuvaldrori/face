@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="40"
+   height="40"
+   viewBox="0 0 24 24"
+   fill="none"
+   version="1.1"
+   id="svg59"
+   sodipodi:docname="launcher_icon.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs63" />
+  <sodipodi:namedview
+     id="namedview61"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="31.791667"
+     inkscape:cx="18.055046"
+     inkscape:cy="9.1061598"
+     inkscape:window-width="1728"
+     inkscape:window-height="1011"
+     inkscape:window-x="0"
+     inkscape:window-y="32"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg59" />
+  <rect
+     width="24"
+     height="24"
+     fill="#000000"
+     id="rect53" />
+  <path
+     d="M12.1941 10.8471L16.1353 7.30588L16.9235 8.17646L13.1059 11.6059C13.1471 11.7294 13.1765 11.8588 13.1765 12C13.1765 12.6471 12.6471 13.1765 12 13.1765C11.701 13.1765 11.4272 13.0634 11.219 12.878L5.90332 15.9461L5.60926 15.4367L10.8899 12.3888C10.8469 12.2669 10.8235 12.1361 10.8235 12C10.8235 11.9824 10.8265 11.9662 10.8294 11.95C10.8324 11.9338 10.8353 11.9176 10.8353 11.9L8.12353 10.0471L8.78235 9.07058L11.5059 10.9353C11.6588 10.8647 11.8235 10.8235 12 10.8235C12.0647 10.8235 12.1294 10.8353 12.1941 10.8471Z"
+     fill="#F4F4F4"
+     id="path55" />
+  <path
+     fill-rule="evenodd"
+     clip-rule="evenodd"
+     d="M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12ZM11.4118 20.2146V18.4706H12.5882V20.2146C16.6676 19.9267 19.9267 16.6676 20.2146 12.5882H18.4706V11.4118H20.2146C19.9267 7.33237 16.6676 4.07329 12.5882 3.78539V5.52941H11.4118V3.78539C7.33237 4.07329 4.07329 7.33237 3.78539 11.4118H5.52941V12.5882H3.78539C4.07329 16.6676 7.33237 19.9267 11.4118 20.2146Z"
+     fill="#F4F4F4"
+     id="path57" />
+</svg>
