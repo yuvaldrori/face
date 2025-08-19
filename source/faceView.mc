@@ -8,66 +8,7 @@ import Toybox.Weather;
 import Toybox.SensorHistory;
 
 class faceView extends WatchUi.WatchFace {
-
-    function initialize() {
-        WatchFace.initialize();
-    }
-
-    // Load your resources here
-    function onLayout(dc as Dc) as Void {
-        setLayout(Rez.Layouts.WatchFace(dc));
-    }
-
-    // Called when this View is brought to the foreground. Restore
-    // the state of this View and prepare it to be shown. This includes
-    // loading resources into memory.
-    function onShow() as Void {
-    }
-
-    // Update the view
-    function onUpdate(dc as Dc) as Void {
-        // Get and show the current heart rate
-        var view = View.findDrawableById("HeartLabel") as Text;
-        var sensorIter = Toybox.SensorHistory.getHeartRateHistory({:period => 1});
-        var rateString = "<3 --";
-        if (sensorIter != null) {
-            var rate = sensorIter.next().data;
-            if (rate != null) {
-                rateString = Lang.format("<3 $1$", [rate]);
-            }
-        }
-        view.setText(rateString);
-
-        // Get and show the current battery level
-        view = View.findDrawableById("BatteryLabel") as Text;
-        var stats = System.getSystemStats();
-        var indicator = "[||||}";
-        if (stats.battery <= 25) {
-            indicator = "[|   }";
-        } else if (stats.battery <= 50) {
-            indicator = "[||  }";
-        } else if (stats.battery <= 75) {
-            indicator = "[||| }";
-        } else if (stats.battery <= 100) {
-            indicator = "[||||}";
-        }
-        var days = Lang.format("$1$ $2$ days", [indicator, stats.batteryInDays.format("%d")]);
-        view.setText(days);
-
-        // Get and show the current time
-        var clockTime = System.getClockTime();
-        var timeString = Lang.format("$1$:$2$", [clockTime.hour, clockTime.min.format("%02d")]);
-        view = View.findDrawableById("TimeLabel") as Text;
-        view.setText(timeString);
-
-        // Get and show the current date
-        var info = Gregorian.info(Time.now(), Time.FORMAT_MEDIUM);
-        view = View.findDrawableById("DateLabel") as Text;
-        var date = Lang.format("$1$ $2$ $3$ $4$", [info.day_of_week, info.month, info.day, info.year]);
-        view.setText(date);
-
-        // Get and show the current weather
-        var weatherConditions = {
+        const WEATHERCONDITIONS = {
             Weather.CONDITION_CLEAR => "Clear",
             Weather.CONDITION_PARTLY_CLOUDY => "Partly cloudy",
             Weather.CONDITION_MOSTLY_CLOUDY => "Mostly cloudy",
@@ -124,14 +65,79 @@ class faceView extends WatchUi.WatchFace {
             Weather.CONDITION_UNKNOWN => "Unknown"
         };
 
+    function initialize() {
+        WatchFace.initialize();
+    }
+
+    // Load your resources here
+    var heartRateLabel;
+    var batteryLabel;
+    var timeLabel;
+    var dateLabel;
+    var conditionLabel;
+    var tempLabel;
+
+    function onLayout(dc as Dc) as Void {
+        setLayout(Rez.Layouts.WatchFace(dc));
+        heartRateLabel = View.findDrawableById("HeartLabel");
+        batteryLabel = View.findDrawableById("BatteryLabel");
+        timeLabel = View.findDrawableById("TimeLabel");
+        dateLabel = View.findDrawableById("DateLabel");
+        conditionLabel = View.findDrawableById("ConditionLabel");
+        tempLabel = View.findDrawableById("TempLabel");
+    }
+
+    // Called when this View is brought to the foreground. Restore
+    // the state of this View and prepare it to be shown. This includes
+    // loading resources into memory.
+    function onShow() as Void {
+    }
+
+    // Update the view
+    function onUpdate(dc as Dc) as Void {
+        // Get and show the current heart rate
+        var sensorIter = Toybox.SensorHistory.getHeartRateHistory({:period => 1});
+        var rateString = "<3 --";
+        if (sensorIter != null) {
+            var rate = sensorIter.next().data;
+            if (rate != null) {
+                rateString = Lang.format("<3 $1$", [rate]);
+            }
+        }
+        heartRateLabel.setText(rateString);
+
+        // Get and show the current battery level
+        var stats = System.getSystemStats();
+        var indicator = "[||||}";
+        if (stats.battery <= 25) {
+            indicator = "[|   }";
+        } else if (stats.battery <= 50) {
+            indicator = "[||  }";
+        } else if (stats.battery <= 75) {
+            indicator = "[||| }";
+        } else if (stats.battery <= 100) {
+            indicator = "[||||}";
+        }
+        var days = Lang.format("$1$ $2$ days", [indicator, stats.batteryInDays.format("%d")]);
+        batteryLabel.setText(days);
+
+        // Get and show the current time
+        var clockTime = System.getClockTime();
+        var timeString = Lang.format("$1$:$2$", [clockTime.hour, clockTime.min.format("%02d")]);
+        timeLabel.setText(timeString);
+
+        // Get and show the current date
+        var info = Gregorian.info(Time.now(), Time.FORMAT_MEDIUM);
+        var date = Lang.format("$1$ $2$ $3$ $4$", [info.day_of_week, info.month, info.day, info.year]);
+        dateLabel.setText(date);
+
+        // Get and show the current weather
         var conditions = Weather.getCurrentConditions();
         if (conditions != null) {
-            view = View.findDrawableById("ConditionLabel") as Text;
-            var condition = weatherConditions[conditions.condition];
-            view.setText(condition);
-            view = View.findDrawableById("TempLabel") as Text;
+            var condition = WEATHERCONDITIONS[conditions.condition];
+            conditionLabel.setText(condition);
             var temparature = Lang.format("$1$°", [conditions.temperature.format("%02d")]);
-            view.setText(temparature);
+            tempLabel.setText(temparature);
         }
 
         // Call the parent onUpdate function to redraw the layout
