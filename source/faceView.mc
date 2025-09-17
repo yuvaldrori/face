@@ -97,26 +97,19 @@ class faceView extends WatchUi.WatchFace {
     function onUpdate(dc as Dc) as Void {
         // Get and show the current heart rate
         var sensorIter = Toybox.SensorHistory.getHeartRateHistory({:period => 1});
-        var rateString = "<3 --";
+        var rate = null;
         if (sensorIter != null) {
-            var rate = sensorIter.next().data;
-            if (rate != null) {
-                rateString = Lang.format("<3 $1$", [rate]);
-            }
+            rate = sensorIter.next().data;
         }
+        rate = rate ? rate : "--";
+        var rateString = Lang.format("❤️ $1$", [rate]);
         heartRateLabel.setText(rateString);
 
         // Get and show the current battery level
         var stats = System.getSystemStats();
-        var indicator = "[||||}";
+        var indicator = "🔋";
         if (stats.battery <= 25) {
-            indicator = "[|   }";
-        } else if (stats.battery <= 50) {
-            indicator = "[||  }";
-        } else if (stats.battery <= 75) {
-            indicator = "[||| }";
-        } else if (stats.battery <= 100) {
-            indicator = "[||||}";
+            indicator = "🪫";
         }
         var days = Lang.format("$1$ $2$ days", [indicator, stats.batteryInDays.format("%d")]);
         batteryLabel.setText(days);
