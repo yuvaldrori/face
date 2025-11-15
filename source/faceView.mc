@@ -129,7 +129,7 @@ class faceView extends WatchUi.WatchFace {
         if (conditions != null) {
             var condition = WEATHERCONDITIONS[conditions.condition];
             conditionLabel.setText(condition);
-            var temparature = Lang.format("$1$°", [conditions.temperature.format("%02d")]);
+            var temparature = Lang.format("$1$°", [conditions.temperature.format("%d")]);
             tempLabel.setText(temparature);
         }
 
