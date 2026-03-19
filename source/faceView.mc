@@ -5,150 +5,82 @@ import Toybox.WatchUi;
 import Toybox.Time;
 import Toybox.Time.Gregorian;
 import Toybox.Weather;
-import Toybox.SensorHistory;
+import Toybox.Activity;
 
 class faceView extends WatchUi.WatchFace {
-        const WEATHERCONDITIONS = {
-            Weather.CONDITION_CLEAR => "Clear",
-            Weather.CONDITION_PARTLY_CLOUDY => "Partly cloudy",
-            Weather.CONDITION_MOSTLY_CLOUDY => "Mostly cloudy",
-            Weather.CONDITION_RAIN => "Rain",
-            Weather.CONDITION_SNOW => "Snow",
-            Weather.CONDITION_WINDY => "Windy",
-            Weather.CONDITION_THUNDERSTORMS => "Thunderstorms",
-            Weather.CONDITION_WINTRY_MIX=> "Wintry mix",
-            Weather.CONDITION_FOG => "Fog",
-            Weather.CONDITION_HAZY => "Hazy",
-            Weather.CONDITION_HAIL => "Hail",
-            Weather.CONDITION_SCATTERED_SHOWERS => "Scattered showers",
-            Weather.CONDITION_SCATTERED_THUNDERSTORMS => "Scattered thunderstorms",
-            Weather.CONDITION_UNKNOWN_PRECIPITATION => "Unknown precipitation",
-            Weather.CONDITION_LIGHT_RAIN => "Light rain",
-            Weather.CONDITION_HEAVY_RAIN => "Heavy rain",
-            Weather.CONDITION_LIGHT_SNOW => "Light snow",
-            Weather.CONDITION_HEAVY_SNOW => "Heavy snow",
-            Weather.CONDITION_LIGHT_RAIN_SNOW => "Light rain snow",
-            Weather.CONDITION_HEAVY_RAIN_SNOW => "Heavy rain snow",
-            Weather.CONDITION_CLOUDY => "Cloudy",
-            Weather.CONDITION_RAIN_SNOW => "Rain snow",
-            Weather.CONDITION_PARTLY_CLEAR => "Partly clear",
-            Weather.CONDITION_MOSTLY_CLEAR => "Mostly clear",
-            Weather.CONDITION_LIGHT_SHOWERS => "Light showers",
-            Weather.CONDITION_SHOWERS => "Showers",
-            Weather.CONDITION_HEAVY_SHOWERS => "Heavy showers",
-            Weather.CONDITION_CHANCE_OF_SHOWERS => "Chance of showers",
-            Weather.CONDITION_CHANCE_OF_THUNDERSTORMS => "Chance of thunderstorms",
-            Weather.CONDITION_MIST => "Mist",
-            Weather.CONDITION_DUST => "Dust",
-            Weather.CONDITION_DRIZZLE => "Drizzle",
-            Weather.CONDITION_TORNADO => "Tornado",
-            Weather.CONDITION_SMOKE => "Smoke",
-            Weather.CONDITION_ICE => "Ice",
-            Weather.CONDITION_SAND => "Sand",
-            Weather.CONDITION_SQUALL => "Squall",
-            Weather.CONDITION_SANDSTORM => "Sandstorm",
-            Weather.CONDITION_VOLCANIC_ASH => "Volcanic ash",
-            Weather.CONDITION_HAZE => "Haze",
-            Weather.CONDITION_FAIR => "Fair",
-            Weather.CONDITION_HURRICANE => "Hurricane",
-            Weather.CONDITION_TROPICAL_STORM => "Tropical storm",
-            Weather.CONDITION_CHANCE_OF_SNOW => "Chance of snow",
-            Weather.CONDITION_CHANCE_OF_RAIN_SNOW => "Chance of rain snow",
-            Weather.CONDITION_CLOUDY_CHANCE_OF_RAIN => "Cloudy chance of rain",
-            Weather.CONDITION_CLOUDY_CHANCE_OF_SNOW => "Cloudy chance of snow",
-            Weather.CONDITION_CLOUDY_CHANCE_OF_RAIN_SNOW => "Cloudy chance of rain snow",
-            Weather.CONDITION_FLURRIES => "Flurries",
-            Weather.CONDITION_FREEZING_RAIN => "Freezing rain",
-            Weather.CONDITION_SLEET => "Sleet",
-            Weather.CONDITION_ICE_SNOW => "Ice snow",
-            Weather.CONDITION_THIN_CLOUDS => "Thin clouds",
-            Weather.CONDITION_UNKNOWN => "Unknown"
-        };
+    private var _heartRateLabel as WatchUi.Text?;
+    private var _batteryLabel as WatchUi.Text?;
+    private var _timeLabel as WatchUi.Text?;
+    private var _dateLabel as WatchUi.Text?;
+    private var _conditionLabel as WatchUi.Text?;
+    private var _tempLabel as WatchUi.Text?;
+
+    private var _weatherConditionsMap as Dictionary<Integer, ResourceId>?;
 
     function initialize() {
         WatchFace.initialize();
+        // Uses the automatically generated mapping from WeatherGenerated.mc
+        _weatherConditionsMap = WeatherGenerated.getMap();
     }
-
-    // Load your resources here
-    var heartRateLabel;
-    var batteryLabel;
-    var timeLabel;
-    var dateLabel;
-    var conditionLabel;
-    var tempLabel;
 
     function onLayout(dc as Dc) as Void {
         setLayout(Rez.Layouts.WatchFace(dc));
-        heartRateLabel = View.findDrawableById("HeartLabel");
-        batteryLabel = View.findDrawableById("BatteryLabel");
-        timeLabel = View.findDrawableById("TimeLabel");
-        dateLabel = View.findDrawableById("DateLabel");
-        conditionLabel = View.findDrawableById("ConditionLabel");
-        tempLabel = View.findDrawableById("TempLabel");
+        _heartRateLabel = View.findDrawableById("HeartLabel") as WatchUi.Text;
+        _batteryLabel = View.findDrawableById("BatteryLabel") as WatchUi.Text;
+        _timeLabel = View.findDrawableById("TimeLabel") as WatchUi.Text;
+        _dateLabel = View.findDrawableById("DateLabel") as WatchUi.Text;
+        _conditionLabel = View.findDrawableById("ConditionLabel") as WatchUi.Text;
+        _tempLabel = View.findDrawableById("TempLabel") as WatchUi.Text;
     }
 
-    // Called when this View is brought to the foreground. Restore
-    // the state of this View and prepare it to be shown. This includes
-    // loading resources into memory.
-    function onShow() as Void {
-    }
-
-    // Update the view
     function onUpdate(dc as Dc) as Void {
-        // Get and show the current heart rate
-        var sensorIter = Toybox.SensorHistory.getHeartRateHistory({:period => 1});
-        var rate = null;
-        if (sensorIter != null) {
-            rate = sensorIter.next().data;
+        // Heart Rate
+        var activityInfo = Activity.getActivityInfo();
+        var rate = (activityInfo != null) ? activityInfo.currentHeartRate : null;
+        if (_heartRateLabel != null) {
+            _heartRateLabel.setText(faceLogic.getHeartRateString(rate));
         }
-        rate = rate ? rate : "--";
-        var rateString = Lang.format("❤️ $1$", [rate]);
-        heartRateLabel.setText(rateString);
 
-        // Get and show the current battery level
+        // Battery
         var stats = System.getSystemStats();
-        var indicator = "🔋";
-        if (stats.battery <= 25) {
-            indicator = "🪫";
+        if (_batteryLabel != null) {
+            _batteryLabel.setText(faceLogic.getBatteryString(stats.battery as Float, stats.batteryInDays as Float?));
         }
-        var days = Lang.format("$1$ $2$ days", [indicator, stats.batteryInDays.format("%d")]);
-        batteryLabel.setText(days);
 
-        // Get and show the current time
+        // Time
         var clockTime = System.getClockTime();
-        var timeString = Lang.format("$1$:$2$", [clockTime.hour, clockTime.min.format("%02d")]);
-        timeLabel.setText(timeString);
+        if (_timeLabel != null) {
+            _timeLabel.setText(faceLogic.getTimeString(clockTime.hour as Number, clockTime.min as Number));
+        }
 
-        // Get and show the current date
+        // Date
         var info = Gregorian.info(Time.now(), Time.FORMAT_MEDIUM);
-        var date = Lang.format("$1$ $2$ $3$ $4$", [info.day_of_week, info.month, info.day, info.year]);
-        dateLabel.setText(date);
+        if (_dateLabel != null) {
+            _dateLabel.setText(faceLogic.getDateString(info));
+        }
 
-        // Get and show the current weather
+        // Weather
         var conditions = Weather.getCurrentConditions();
         if (conditions != null) {
-            var condition = WEATHERCONDITIONS[conditions.condition];
-            conditionLabel.setText(condition);
-            var temparature = Lang.format("$1$°", [conditions.temperature.format("%d")]);
-            tempLabel.setText(temparature);
+            var condition = conditions.condition;
+            if (condition != null) {
+                var map = _weatherConditionsMap;
+                var resId = (map != null && map.hasKey(condition)) ? map[condition] : null;
+                var conditionLabel = _conditionLabel;
+                if (conditionLabel != null) {
+                    if (resId != null) {
+                        conditionLabel.setText(WatchUi.loadResource(resId) as String);
+                    } else {
+                        // Fallback to a generic string if condition not found
+                        conditionLabel.setText("Unknown");
+                    }
+                }
+            }
+            if (_tempLabel != null) {
+                _tempLabel.setText(faceLogic.getTemperatureString(conditions.temperature as Number?));
+            }
         }
 
-        // Call the parent onUpdate function to redraw the layout
         View.onUpdate(dc);
     }
-
-    // Called when this View is removed from the screen. Save the
-    // state of this View here. This includes freeing resources from
-    // memory.
-    function onHide() as Void {
-    }
-
-    // The user has just looked at their watch. Timers and animations may be started here.
-    function onExitSleep() as Void {
-    }
-
-    // Terminate any active timers and prepare for slow updates.
-    function onEnterSleep() as Void {
-    }
-
 }

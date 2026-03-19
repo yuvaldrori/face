@@ -2,3 +2,9 @@
 /app
 *~
 *.swp
+
+# Garmin Generated Files
+source/weatherGenerated.mc
+resources/strings/weather_gen.xml
+bin/*.prg
+bin/*.debug.xml
