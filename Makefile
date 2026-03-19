@@ -1,5 +1,5 @@
 # Garmin Connect IQ Makefile for face
-SDK_HOME = /home/yuval/.Garmin/ConnectIQ/Sdks/connectiq-sdk-lin-9.1.0-2026-03-09-6a872a80b
+SDK_HOME = $(HOME)/.Garmin/ConnectIQ/Sdks/connectiq-sdk-lin-9.1.0-2026-03-09-6a872a80b
 MONKEYC = $(SDK_HOME)/bin/monkeyc
 MONKEYDO = $(SDK_HOME)/bin/monkeydo
 SIMULATOR = $(SDK_HOME)/bin/simulator
