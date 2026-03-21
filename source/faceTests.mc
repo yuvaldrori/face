@@ -49,6 +49,28 @@ function testTemperatureString(logger as Logger) as Boolean {
 }
 
 (:test)
+function testUpdateLogic(logger as Logger) as Boolean {
+    // Minute changed: Full update
+    Test.assertEqual(faceLogic.needsFullUpdate(15, 16), true);
+    // Minute same: Partial update
+    Test.assertEqual(faceLogic.needsFullUpdate(15, 15), false);
+    // New minute: Full update
+    Test.assertEqual(faceLogic.needsFullUpdate(-1, 0), true);
+    return true;
+}
+
+(:test)
+function testClipRect(logger as Logger) as Boolean {
+    var rect = faceLogic.getHeartRateClipRect(240);
+    Test.assertEqual(rect.size(), 4);
+    Test.assertEqual(rect[0], 0);   // x
+    Test.assertEqual(rect[1], 0);   // y
+    Test.assertEqual(rect[2], 240); // width
+    Test.assertEqual(rect[3], 30);  // height
+    return true;
+}
+
+(:test)
 function testWeatherMapping(logger as Logger) as Boolean {
     var map = WeatherGenerated.getMap();
     
