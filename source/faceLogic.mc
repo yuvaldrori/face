@@ -7,28 +7,27 @@ import Toybox.Weather;
 module faceLogic {
 
     function getHeartRateString(rate as Number?) as String {
-        return Lang.format("❤️ $1$", [rate != null ? rate : "--"]);
+        return "❤️ " + (rate != null ? rate.toString() : "--");
     }
 
     function getBatteryString(batteryLevel as Float, batteryInDays as Float?) as String {
         var indicator = (batteryLevel <= 25.0) ? "🪫" : "🔋";
         var days = (batteryInDays != null) ? batteryInDays.format("%d") : "--";
-        return Lang.format("$1$ $2$ days", [indicator, days]);
+        return indicator + " " + days + " days";
     }
 
     function getTimeString(hour as Number, min as Number) as String {
-        return Lang.format("$1$:$2$", [hour, min.format("%02d")]);
+        return hour.toString() + ":" + min.format("%02d");
     }
 
     function getDateString(info as Gregorian.Info) as String {
-        return Lang.format("$1$ $2$ $3$ $4$", [info.day_of_week, info.month, info.day, info.year]);
+        return info.year.toString() + "-" + 
+               (info.month as Number).format("%02d") + "-" + 
+               (info.day as Number).format("%02d");
     }
 
     function getTemperatureString(temp as Number?) as String {
-        if (temp == null) {
-            return "--°";
-        }
-        return Lang.format("$1$°", [temp.format("%d")]);
+        return (temp != null ? temp.format("%d") : "--") + "°";
     }
 
     function needsFullUpdate(lastMinute as Number, currentMinute as Number) as Boolean {

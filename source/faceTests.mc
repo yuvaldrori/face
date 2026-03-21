@@ -32,12 +32,11 @@ function testTimeString(logger as Logger) as Boolean {
 (:test)
 function testDateString(logger as Logger) as Boolean {
     var info = new Gregorian.Info();
-    info.day_of_week = "Mon";
-    info.month = "Mar";
-    info.day = 15;
+    info.month = 3;
+    info.day = 21;
     info.year = 2026;
     
-    Test.assertEqual(faceLogic.getDateString(info), "Mon Mar 15 2026");
+    Test.assertEqual(faceLogic.getDateString(info), "2026-03-21");
     return true;
 }
 

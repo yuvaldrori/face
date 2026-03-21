@@ -17,11 +17,14 @@ class faceView extends WatchUi.WatchFace {
 
     private var _weatherConditionsMap as Dictionary<Integer, ResourceId>?;
     private var _lastUpdateMinute as Number = -1;
+    private var _lastWeatherCondition as Integer = -1;
+    private var _isLowPower as Boolean = true;
+    private var _unknownLabel as String = "";
 
     function initialize() {
         WatchFace.initialize();
-        // Uses the automatically generated mapping from WeatherGenerated.mc
         _weatherConditionsMap = WeatherGenerated.getMap();
+        _unknownLabel = WatchUi.loadResource(Rez.Strings.weather_gen_condition_unknown) as String;
     }
 
     function onLayout(dc as Dc) as Void {
@@ -37,54 +40,79 @@ class faceView extends WatchUi.WatchFace {
     function onUpdate(dc as Dc) as Void {
         var clockTime = System.getClockTime();
         var isFullUpdate = faceLogic.needsFullUpdate(_lastUpdateMinute, clockTime.min);
-        _lastUpdateMinute = clockTime.min;
-
-        // Heart Rate - Always update data every second
-        var activityInfo = Activity.getActivityInfo();
-        var rate = (activityInfo != null) ? activityInfo.currentHeartRate : null;
-        if (_heartRateLabel != null) {
-            _heartRateLabel.setText(faceLogic.getHeartRateString(rate));
+        
+        // HEART RATE: Every Second (if not in low power)
+        if (!_isLowPower) {
+            updateHeartRate();
         }
 
+        // FULL DATA: Every Minute
         if (isFullUpdate) {
-            // Full data refresh: Only recalculate these strings once a minute
-            var stats = System.getSystemStats();
-            if (_batteryLabel != null) {
-                _batteryLabel.setText(faceLogic.getBatteryString(stats.battery as Float, stats.batteryInDays as Float?));
-            }
-
-            if (_timeLabel != null) {
-                _timeLabel.setText(faceLogic.getTimeString(clockTime.hour as Number, clockTime.min as Number));
-            }
-
-            var info = Gregorian.info(Time.now(), Time.FORMAT_MEDIUM);
-            if (_dateLabel != null) {
-                _dateLabel.setText(faceLogic.getDateString(info));
-            }
-
-            var conditions = Weather.getCurrentConditions();
-            if (conditions != null) {
-                var condition = conditions.condition;
-                if (condition != null) {
-                    var map = _weatherConditionsMap;
-                    var resId = (map != null && map.hasKey(condition)) ? map[condition] : null;
-                    var conditionLabel = _conditionLabel;
-                    if (conditionLabel != null) {
-                        if (resId != null) {
-                            conditionLabel.setText(WatchUi.loadResource(resId) as String);
-                        } else {
-                            conditionLabel.setText("Unknown");
-                        }
-                    }
-                }
-                if (_tempLabel != null) {
-                    _tempLabel.setText(faceLogic.getTemperatureString(conditions.temperature as Number?));
-                }
-            }
+            _lastUpdateMinute = clockTime.min;
+            updateLongTermData(clockTime);
         }
 
-        // Always clear any clips and redraw the full screen to prevent black screen issues
+        // Always redraw full screen for Fenix 8
         dc.clearClip();
         View.onUpdate(dc);
+    }
+
+    private function updateHeartRate() as Void {
+        var label = _heartRateLabel;
+        if (label != null) {
+            var activityInfo = Activity.getActivityInfo();
+            var rate = (activityInfo != null) ? activityInfo.currentHeartRate : null;
+            label.setText(faceLogic.getHeartRateString(rate));
+        }
+    }
+
+    private function updateLongTermData(clockTime as System.ClockTime) as Void {
+        var stats = System.getSystemStats();
+        if (_batteryLabel != null) {
+            _batteryLabel.setText(faceLogic.getBatteryString(stats.battery as Float, stats.batteryInDays as Float?));
+        }
+
+        if (_timeLabel != null) {
+            _timeLabel.setText(faceLogic.getTimeString(clockTime.hour as Number, clockTime.min as Number));
+        }
+
+        var info = Gregorian.info(Time.now(), Time.FORMAT_SHORT);
+        if (_dateLabel != null) {
+            _dateLabel.setText(faceLogic.getDateString(info));
+        }
+
+        var conditions = Weather.getCurrentConditions();
+        if (conditions != null) {
+            updateWeather(conditions);
+        }
+    }
+
+    private function updateWeather(conditions as Weather.CurrentConditions) as Void {
+        var condition = conditions.condition;
+        if (condition != null && _conditionLabel != null) {
+            if (condition != _lastWeatherCondition) {
+                _lastWeatherCondition = condition;
+                var map = _weatherConditionsMap;
+                var resId = (map != null && map.hasKey(condition)) ? map[condition] : null;
+                if (resId != null) {
+                    _conditionLabel.setText(WatchUi.loadResource(resId) as String);
+                } else {
+                    _conditionLabel.setText(_unknownLabel);
+                }
+            }
+        }
+        if (_tempLabel != null) {
+            _tempLabel.setText(faceLogic.getTemperatureString(conditions.temperature as Number?));
+        }
+    }
+
+    function onEnterSleep() as Void {
+        _isLowPower = true;
+        WatchUi.requestUpdate();
+    }
+
+    function onExitSleep() as Void {
+        _isLowPower = false;
+        WatchUi.requestUpdate();
     }
 }
