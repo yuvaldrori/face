@@ -60,17 +60,6 @@ function testUpdateLogic(logger as Logger) as Boolean {
 }
 
 (:test)
-function testClipRect(logger as Logger) as Boolean {
-    var rect = faceLogic.getHeartRateClipRect(240);
-    Test.assertEqual(rect.size(), 4);
-    Test.assertEqual(rect[0], 0);   // x
-    Test.assertEqual(rect[1], 0);   // y
-    Test.assertEqual(rect[2], 240); // width
-    Test.assertEqual(rect[3], 30);  // height
-    return true;
-}
-
-(:test)
 function testWeatherMapping(logger as Logger) as Boolean {
     var map = WeatherGenerated.getMap();
     

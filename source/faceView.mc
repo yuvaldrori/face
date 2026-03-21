@@ -39,7 +39,7 @@ class faceView extends WatchUi.WatchFace {
         var isFullUpdate = faceLogic.needsFullUpdate(_lastUpdateMinute, clockTime.min);
         _lastUpdateMinute = clockTime.min;
 
-        // Heart Rate - Always update data
+        // Heart Rate - Always update data every second
         var activityInfo = Activity.getActivityInfo();
         var rate = (activityInfo != null) ? activityInfo.currentHeartRate : null;
         if (_heartRateLabel != null) {
@@ -47,7 +47,7 @@ class faceView extends WatchUi.WatchFace {
         }
 
         if (isFullUpdate) {
-            // Full redraw: Battery, Time, Date, Weather
+            // Full data refresh: Only recalculate these strings once a minute
             var stats = System.getSystemStats();
             if (_batteryLabel != null) {
                 _batteryLabel.setText(faceLogic.getBatteryString(stats.battery as Float, stats.batteryInDays as Float?));
@@ -81,14 +81,10 @@ class faceView extends WatchUi.WatchFace {
                     _tempLabel.setText(faceLogic.getTemperatureString(conditions.temperature as Number?));
                 }
             }
-
-            dc.clearClip();
-        } else {
-            // Partial update: Only redraw the Heart Rate area
-            var clipRect = faceLogic.getHeartRateClipRect(dc.getWidth());
-            dc.setClip(clipRect[0], clipRect[1], clipRect[2], clipRect[3]);
         }
 
+        // Always clear any clips and redraw the full screen to prevent black screen issues
+        dc.clearClip();
         View.onUpdate(dc);
     }
 }

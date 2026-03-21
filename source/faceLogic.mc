@@ -34,9 +34,4 @@ module faceLogic {
     function needsFullUpdate(lastMinute as Number, currentMinute as Number) as Boolean {
         return lastMinute != currentMinute;
     }
-
-    function getHeartRateClipRect(dcWidth as Number) as Array<Number> {
-        // [x, y, width, height]
-        return [0, 0, dcWidth, 30] as Array<Number>;
-    }
 }
