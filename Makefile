@@ -5,7 +5,8 @@ MONKEYDO = $(SDK_HOME)/bin/monkeydo
 SIMULATOR = $(SDK_HOME)/bin/simulator
 DEVELOPER_KEY = $(HOME)/developer_key
 DEVICE = fenix8solar47mm
-JUNGLES = monkey.jungle
+JUNGLE = monkey.jungle
+DEBUG_JUNGLE = debug.jungle
 
 # Output names
 DEBUG_PRG = bin/face-debug.prg
@@ -13,7 +14,7 @@ RELEASE_PRG = bin/face-release.prg
 TEST_PRG = bin/face-test.prg
 
 # Build flags
-COMMON_FLAGS = -d $(DEVICE) -f $(JUNGLES) -y $(DEVELOPER_KEY) -w -l 3
+COMMON_FLAGS = -d $(DEVICE) -y $(DEVELOPER_KEY) -w -l 3
 
 .PHONY: all debug release clean run simulator test check-sim wait-sim generate
 
@@ -22,14 +23,33 @@ all: debug
 # Generate weather strings and code from SDK docs
 generate:
 	@./scripts/generate_weather.sh $(SDK_HOME)
+	@./scripts/generate_layout.sh 260 260
 
 debug: generate
 	@mkdir -p bin
-	$(MONKEYC) $(COMMON_FLAGS) -g -o $(DEBUG_PRG)
+	$(MONKEYC) $(COMMON_FLAGS) -f $(JUNGLE) -g -o $(DEBUG_PRG)
 
 release: generate
 	@mkdir -p bin
-	$(MONKEYC) $(COMMON_FLAGS) -r -O 3 -o $(RELEASE_PRG)
+	$(MONKEYC) $(COMMON_FLAGS) -f $(JUNGLE) -r -O 3 -o $(RELEASE_PRG)
+
+# Debug with alignment overlay
+debug-align: generate
+	@mkdir -p bin
+	$(MONKEYC) $(COMMON_FLAGS) -f $(DEBUG_JUNGLE) -g -o bin/face-debug-align.prg
+
+run-align: debug-align
+	@ss -tuln | grep -q ":1234 " || (echo "Simulator not ready. Starting/Waiting..." && $(MAKE) simulator)
+	$(MONKEYDO) bin/face-debug-align.prg $(DEVICE)
+
+# Profile build (enables -k flag)
+profile: generate
+	@mkdir -p bin
+	$(MONKEYC) $(COMMON_FLAGS) -f $(JUNGLE) -g -k -o bin/face-profile.prg
+
+run-profile: profile
+	@ss -tuln | grep -q ":1234 " || (echo "Simulator not ready. Starting/Waiting..." && $(MAKE) simulator)
+	$(MONKEYDO) bin/face-profile.prg $(DEVICE)
 
 clean:
 	rm -rf bin/*.prg
@@ -62,6 +82,6 @@ run: debug
 test:
 	@mkdir -p bin
 	$(MAKE) generate
-	$(MONKEYC) $(COMMON_FLAGS) -t -o $(TEST_PRG)
+	$(MONKEYC) $(COMMON_FLAGS) -f $(JUNGLE) -t -o $(TEST_PRG)
 	@ss -tuln | grep -q ":1234 " || (echo "Simulator not ready. Starting/Waiting..." && $(MAKE) simulator)
 	$(MONKEYDO) $(TEST_PRG) $(DEVICE) -t || ( [ $$? -eq 1 ] && echo "Tests completed (checking status above)..." )

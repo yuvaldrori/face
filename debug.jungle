@@ -1,3 +1,3 @@
 project.manifest = manifest.xml
 base.sourcePath = source
-base.excludeAnnotations = debug_on
+base.excludeAnnotations = debug_off

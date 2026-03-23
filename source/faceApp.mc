@@ -2,27 +2,27 @@ import Toybox.Application;
 import Toybox.Lang;
 import Toybox.WatchUi;
 
-class faceApp extends Application.AppBase {
+class faceApp extends $.Toybox.Application.AppBase {
 
     function initialize() {
         AppBase.initialize();
     }
 
     // onStart() is called on application start up
-    function onStart(state as Dictionary?) as Void {
+    function onStart(state as $.Toybox.Lang.Dictionary?) as Void {
     }
 
     // onStop() is called when your application is exiting
-    function onStop(state as Dictionary?) as Void {
+    function onStop(state as $.Toybox.Lang.Dictionary?) as Void {
     }
 
     // Return the initial view of your application here
-    function getInitialView() as [Views] or [Views, InputDelegates] {
+    function getInitialView() as [$.Toybox.WatchUi.Views] or [$.Toybox.WatchUi.Views, $.Toybox.WatchUi.InputDelegates] {
         return [ new faceView() ];
     }
 
 }
 
 function getApp() as faceApp {
-    return Application.getApp() as faceApp;
+    return $.Toybox.Application.getApp() as faceApp;
 }

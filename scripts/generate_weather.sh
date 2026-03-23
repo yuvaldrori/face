@@ -10,40 +10,56 @@ if [ ! -f "$DOC_FILE" ]; then
     exit 1
 fi
 
-# Extract conditions
-CONDITIONS=$(grep -oP "CONDITION_[A-Z0-9_]+" "$DOC_FILE" | sort -u)
+# Extract conditions from the SDK documentation HTML
+CONDITIONS=$(grep -o "CONDITION_[A-Z_]*" "$DOC_FILE" | sort | uniq)
 
-# Generate XML
-echo '<strings>' > "$XML_OUT"
+# Generate XML Resources
+cat << EOM > "$XML_OUT"
+<strings>
+EOM
+
 for c in $CONDITIONS; do
-    # Convert CONDITION_PARTLY_CLOUDY to "Partly cloudy"
-    label=$(echo "$c" | sed 's/CONDITION_//' | tr '_' ' ' | tr '[:upper:]' '[:lower:]')
-    label="$(tr '[:lower:]' '[:upper:]' <<< ${label:0:1})${label:1}"
-    
-    # Create valid resource ID (lowercase with underscores)
+    # Simple capitalization: remove prefix, replace _ with space, lowercase, then capitalize words
+    label=$(echo "$c" | sed 's/CONDITION_//' | tr '_' ' ' | tr '[:upper:]' '[:lower:]' | awk '{for(i=1;i<=NF;i++)sub(/./,toupper(substr($i,1,1)),$i)}1')
     res_id="weather_gen_$(echo "$c" | tr '[:upper:]' '[:lower:]')"
-    
     echo "    <string id=\"$res_id\">$label</string>" >> "$XML_OUT"
 done
-echo '</strings>' >> "$XML_OUT"
+
+echo "</strings>" >> "$XML_OUT"
 
 # Generate Monkey C Mapping
 cat << EOM > "$MC_OUT"
 import Toybox.Weather;
 import Toybox.Lang;
+import Toybox.WatchUi;
 
 module WeatherGenerated {
-    function getMap() as Dictionary<Integer, ResourceId> {
-        return {
+    function getConditionString(condition as Integer) as String? {
+        switch (condition) {
 EOM
 
 for c in $CONDITIONS; do
     res_id="weather_gen_$(echo "$c" | tr '[:upper:]' '[:lower:]')"
-    echo "            Weather.$c => Rez.Strings.$res_id," >> "$MC_OUT"
+    echo "            case $.Toybox.Weather.$c:" >> "$MC_OUT"
+    echo "                return $.Toybox.WatchUi.loadResource($.Rez.Strings.$res_id) as String;" >> "$MC_OUT"
 done
 
 cat << EOM >> "$MC_OUT"
-        } as Dictionary<Integer, ResourceId>;
+            default:
+                return null;
+        }
+    }
+
+    function getAllConditions() as Array<Integer> {
+        return [
+EOM
+
+for c in $CONDITIONS; do
+    echo "            $.Toybox.Weather.$c," >> "$MC_OUT"
+done
+
+cat << EOM >> "$MC_OUT"
+        ] as Array<Integer>;
     }
 }
 EOM
