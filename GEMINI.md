@@ -10,7 +10,8 @@ The Fenix 8 Solar hardware utilizes a Memory-In-Pixel (MIP) display with a speci
 Directly calling `dc.drawArc()` with large spans or crossing the 0/360-degree boundary can trigger a hardware driver failure that renders a muddy "orange circle" artifact covering the entire arc track. To prevent this:
 - **Ultra-Granular Segments:** All arcs must be drawn using the `drawSafeArc` helper, which breaks segments into tiny **20-degree chunks**.
 - **Angle Wrapping:** All angles MUST be strictly wrapped to the `0-360` range before being passed to the hardware. Values like `405` (even for CCW arcs) will trigger artifacts.
-- **Anti-Aliasing Management:** Shape primitives (arcs, circles, lines) must be drawn with `dc.setAntiAlias(false)`. Anti-aliasing on MIP shapes is the primary trigger for driver crashes and color corruption.
+- **Anti-Aliasing Management:** Shape primitives (arcs, circles, lines) must be drawn with `dc.setAntiAlias(false)` on the main display DC. Anti-aliasing on MIP shapes is the primary trigger for driver crashes and color corruption. 
+    - **Note:** Do NOT call `setAntiAlias()` on paletted `BufferedBitmap` objects; these buffers do not support anti-aliasing and will throw an unhandled exception if the method is called.
 
 ### UI Layering & "Biting"
 The display palette is limited. To prevent UI elements (like the Clock) from "biting" into or overwriting the side arcs:
