@@ -17,19 +17,23 @@ The display palette is limited. To prevent UI elements (like the Clock) from "bi
 - **Transparency:** All text and icons MUST use `$.Toybox.Graphics.COLOR_TRANSPARENT` as the background color. 
 - **Anti-Aliasing for Text:** Anti-aliasing should be enabled **only** during font rendering to ensure smooth text, then immediately disabled for the next frame's shapes.
 
-## 2. Automation & Optimization
+## 2. Rendering Strategy & optimization
 
-To achieve a "Zero-Math" runtime loop and stay within the 30ms power budget:
+### The "Fenix 8 Solar Quirk": Partial vs. Full Updates
+Research and empirical testing confirmed that `onPartialUpdate` is ineffective on Fenix 8 Solar (System 7/8).
+- **Behavior:** The hardware frequently forces a full `onUpdate` refresh (1Hz) even when in low-power mode, bypassing the partial clipping state.
+- **Strategy (Minimal Full Redraw):** Instead of fighting for partial updates, we use a "Minimal Full Redraw" model:
+    - **Static Background Buffer:** A 4-bit (16-color) `BufferedBitmap` caches the ring tracks, icons, and labels. This is updated only once per minute or on wake.
+    - **1Hz Redraw:** The main `onUpdate` loop performs a hardware-accelerated `drawBitmap` of the background and then overlays only the dynamic text (Clock, HR).
+    - **Smart Polling:** Heart Rate polling is reduced to every **5 seconds** when the watch is in low-power mode (`_isLowPower`), even if the display continues to refresh at 1Hz.
 
-### Layout Generation (`scripts/generate_layout.sh`)
-- Spatial math (CX, CY, arc tracks, row positions) is pre-calculated at build time.
-- The script generates `source/layoutGenerated.mc`. **NEVER** hardcode pixel coordinates in `faceView.mc`. Use the constants in `LayoutGenerated`.
+### Ultra-Safe Arcs (Hardware Stability)
+Directly calling `dc.drawArc()` with large spans or crossing the 0/360-degree boundary can trigger a hardware driver failure that renders a muddy "orange circle" artifact.
+- **Ultra-Granular Segments:** All arcs are drawn using `drawSafeArc`, breaking segments into **20-degree chunks**.
+- **Angle Wrapping:** All angles are strictly wrapped to the `0-360` range.
+- **Anti-Aliasing Shield:** Shape primitives (arcs, icons) are drawn with anti-aliasing **OFF** to prevent driver crashes. Anti-aliasing is enabled **ONLY** for fonts.
 
-### Weather Condition Strings (`scripts/generate_weather.sh`)
-- Weather condition mappings are dynamically extracted from the SDK documentation.
-- The script generates `source/weatherGenerated.mc` and the associated string resources.
-
-## 3. Build & Workflow Automation (`Makefile`)
+## 3. Automation & Spatial Math
 
 The project uses a comprehensive `Makefile` to orchestrate the complex build and generation pipeline.
 

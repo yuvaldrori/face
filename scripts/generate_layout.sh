@@ -33,6 +33,13 @@ BY=$CY
 SX=$((WIDTH - 18))
 SY=$CY
 
+# HR Icon/Text Layout (Static pre-calculation)
+# Heart icon is roughly 20px wide
+# Assuming Font height/width for planning (will be refined by dirty checking)
+# Let's anchor the HR group at CX
+HR_ICON_X=$((CX - 25))
+HR_TEXT_X=$((CX - 2))
+
 cat << EOM > "$MC_OUT"
 // Auto-generated layout constants for ${WIDTH}x${HEIGHT}
 // Generated on $(date)
@@ -60,6 +67,9 @@ module LayoutGenerated {
     const BY = $BY;
     const SX = $SX;
     const SY = $SY;
+    
+    const HR_ICON_X = $HR_ICON_X;
+    const HR_TEXT_X = $HR_TEXT_X;
     
     const MAX_TEXT_WIDTH = 180;
 }
