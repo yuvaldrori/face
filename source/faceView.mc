@@ -34,6 +34,7 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
     private var _lastDateStr as $.Toybox.Lang.String = "";
     private var _lastCondStr as $.Toybox.Lang.String = "";
     private var _lastTempStr as $.Toybox.Lang.String = "";
+    private var _unknownStr as $.Toybox.Lang.String = "";
 
     // Global Constants (Fenix 8 47mm 260x260)
     private const CX = $.LayoutGenerated.CX; 
@@ -55,14 +56,19 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
     // Static Background Buffer (Track arcs, icons, and labels)
     private var _staticBuffer as $.Toybox.Graphics.BufferedBitmapReference? = null;
     private var _lastBufferMinute as $.Toybox.Lang.Number = -1;
+    private var _timeH as $.Toybox.Lang.Number = 0;
+    private var _dateH as $.Toybox.Lang.Number = 0;
 
     function initialize() {
         WatchFace.initialize();
         _hasAntiAlias = ($.Toybox.Graphics.Dc has :setAntiAlias);
+        _unknownStr = $.Toybox.WatchUi.loadResource($.Rez.Strings.weather_gen_condition_unknown) as String;
     }
 
     function onLayout(dc as $.Toybox.Graphics.Dc) as Void {
         initializeStaticBuffer();
+        _timeH = dc.getFontHeight(FONT_TIME);
+        _dateH = dc.getFontHeight(FONT_SMALL);
         var clockTime = $.Toybox.System.getClockTime();
         updateLongTermData(clockTime, dc);
         updateHeartRate();
@@ -129,48 +135,47 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         if (!(buffer instanceof $.Toybox.Graphics.BufferedBitmap)) { return; }
 
         var bDc = buffer.getDc();
-        if (_hasAntiAlias) { bDc.setAntiAlias(false); }
 
         bDc.setColor(COLOR_BG, COLOR_BG);
         bDc.clear();
 
         // A. Static Arcs (Tracks)
         bDc.setPenWidth(ARC_PEN_WIDTH);
-        bDc.setColor($.Toybox.Graphics.COLOR_LT_GRAY, COLOR_BG);
-        drawSafeArc(bDc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.BATT_TRACK_START, $.LayoutGenerated.BATT_TRACK_END);
-        drawSafeArc(bDc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, $.LayoutGenerated.SOLAR_TRACK_END);
+        bDc.setColor($.Toybox.Graphics.COLOR_DK_GRAY, COLOR_BG);
+        faceLogic.drawSafeArc(bDc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.BATT_TRACK_START, $.LayoutGenerated.BATT_TRACK_END);
+        faceLogic.drawSafeArc(bDc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, $.LayoutGenerated.SOLAR_TRACK_END);
 
         // B. Data Arcs (Fill - Static for this minute)
         bDc.setColor(faceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
         var battFillAngle = (_batteryLevel / 100.0) * 90.0;
         if (battFillAngle > 0) {
-            drawSafeArc(bDc, CX, CX, ARC_RADIUS, Graphics.ARC_CLOCKWISE, $.LayoutGenerated.BATT_START, ($.LayoutGenerated.BATT_START - battFillAngle).toNumber());
+            faceLogic.drawSafeArc(bDc, CX, CX, ARC_RADIUS, Graphics.ARC_CLOCKWISE, $.LayoutGenerated.BATT_START, ($.LayoutGenerated.BATT_START - battFillAngle).toNumber());
         }
 
         if (_solarIntensity > 0) {
             bDc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
             var clampedIntensity = _solarIntensity > 100 ? 100.0 : _solarIntensity;
             var solarFillAngle = (clampedIntensity / 100.0) * 90.0;
-            drawSafeArc(bDc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, ($.LayoutGenerated.SOLAR_TRACK_START + solarFillAngle).toNumber());
+            faceLogic.drawSafeArc(bDc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, ($.LayoutGenerated.SOLAR_TRACK_START + solarFillAngle).toNumber());
         }
 
         // C. Static Icons
         bDc.setPenWidth(1);
         var bx = $.LayoutGenerated.BX; var by = $.LayoutGenerated.BY;
-        bDc.setColor($.Toybox.Graphics.COLOR_LT_GRAY, $.Toybox.Graphics.COLOR_TRANSPARENT);
+        bDc.setColor($.Toybox.Graphics.COLOR_LT_GRAY, COLOR_BG);
         bDc.drawRectangle(bx - 4, by - 7, 8, 14);
         bDc.fillRectangle(bx - 2, by - 9, 4, 2); 
-        bDc.setColor(faceLogic.getBatteryColor(_batteryLevel), $.Toybox.Graphics.COLOR_TRANSPARENT);
+        bDc.setColor(faceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
         var fillH = (12 * (_batteryLevel / 100.0)).toNumber();
         if (fillH > 0) { bDc.fillRectangle(bx - 3, by + 6 - fillH, 6, fillH); }
 
         var sx = $.LayoutGenerated.SX; var sy = $.LayoutGenerated.SY;
-        bDc.setColor($.Toybox.Graphics.COLOR_YELLOW, $.Toybox.Graphics.COLOR_TRANSPARENT);
+        bDc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
         bDc.fillCircle(sx, sy, 3);
-        for (var i = 0; i < 8; i++) {
-            var ang = Math.toRadians(i * 45);
-            bDc.drawLine(sx + (Math.cos(ang) * 4.5).toNumber(), sy + (Math.sin(ang) * 4.5).toNumber(),
-                         sx + (Math.cos(ang) * 6.5).toNumber(), sy + (Math.sin(ang) * 6.5).toNumber());
+        var rays = $.LayoutGenerated.SOLAR_RAYS;
+        for (var i = 0; i < rays.size(); i++) {
+            var r = rays[i];
+            bDc.drawLine(sx + r[0], sy + r[1], sx + r[2], sy + r[3]);
         }
     }
 
@@ -178,19 +183,15 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         if (_hasAntiAlias) { dc.setAntiAlias(true); }
         dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
 
-        var timeH = dc.getFontHeight(FONT_TIME);
-        var dateH = dc.getFontHeight(FONT_SMALL);
         var yTimeUp = TOP_Y + 12;
 
         dc.drawText(CX, yTimeUp, FONT_TIME,  _lastTimeStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(CX, (yTimeUp + timeH) - dateH, FONT_SMALL, _lastDateStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(CX, (yTimeUp + _timeH) - _dateH, FONT_SMALL, _lastDateStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
 
-        // HR Group (Dynamic)
-        var hrTextWidth = dc.getTextWidthInPixels(_lastHrStr, FONT_SMALL);
-        var hrStartX = CX - ((20 + 8 + hrTextWidth) / 2);
-        drawHeartIcon(dc, hrStartX + 10, Y_HR + 14, $.Toybox.Graphics.COLOR_RED);
+        // HR Group (Static Alignment)
+        drawHeartIcon(dc, $.LayoutGenerated.HR_X, Y_HR + 14, $.Toybox.Graphics.COLOR_RED);
         dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
-        dc.drawText(hrStartX + 28, Y_HR, FONT_SMALL, _lastHrStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
+        dc.drawText($.LayoutGenerated.HR_TEXT_X, Y_HR, FONT_SMALL, _lastHrStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
 
         // Weather Group (Semi-Static)
         if (_isCondWrapped) {
@@ -200,6 +201,8 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
             dc.drawText(CX, Y_COND, FONT_SMALL, _lastCondStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
         }
         dc.drawText(CX, Y_TEMP, FONT_SMALL, _lastTempStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
+
+        if (_hasAntiAlias) { dc.setAntiAlias(false); }
     }
 
     private function renderFullFallback(dc as $.Toybox.Graphics.Dc) as Void {
@@ -209,79 +212,49 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         // Icons
         dc.setPenWidth(1);
         var bx = $.LayoutGenerated.BX; var by = $.LayoutGenerated.BY;
-        dc.setColor($.Toybox.Graphics.COLOR_LT_GRAY, $.Toybox.Graphics.COLOR_TRANSPARENT);
+        dc.setColor($.Toybox.Graphics.COLOR_LT_GRAY, COLOR_BG);
         dc.drawRectangle(bx - 4, by - 7, 8, 14);
         dc.fillRectangle(bx - 2, by - 9, 4, 2); 
-        dc.setColor(faceLogic.getBatteryColor(_batteryLevel), $.Toybox.Graphics.COLOR_TRANSPARENT);
+        dc.setColor(faceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
         var fillH = (12 * (_batteryLevel / 100.0)).toNumber();
         if (fillH > 0) { dc.fillRectangle(bx - 3, by + 6 - fillH, 6, fillH); }
 
         var sx = $.LayoutGenerated.SX; var sy = $.LayoutGenerated.SY;
-        dc.setColor($.Toybox.Graphics.COLOR_YELLOW, $.Toybox.Graphics.COLOR_TRANSPARENT);
+        dc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
         dc.fillCircle(sx, sy, 3);
-        for (var i = 0; i < 8; i++) {
-            var ang = Math.toRadians(i * 45);
-            dc.drawLine(sx + (Math.cos(ang) * 4.5).toNumber(), sy + (Math.sin(ang) * 4.5).toNumber(),
-                         sx + (Math.cos(ang) * 6.5).toNumber(), sy + (Math.sin(ang) * 6.5).toNumber());
+        var rays = $.LayoutGenerated.SOLAR_RAYS;
+        for (var i = 0; i < rays.size(); i++) {
+            var r = rays[i];
+            dc.drawLine(sx + r[0], sy + r[1], sx + r[2], sy + r[3]);
         }
     }
 
     private function renderArcsDirectly(dc as $.Toybox.Graphics.Dc) as Void {
+        if (_hasAntiAlias) { dc.setAntiAlias(false); }
         dc.setColor(COLOR_BG, COLOR_BG);
         dc.clear();
         dc.setPenWidth(ARC_PEN_WIDTH);
         
         // Battery Arc
-        dc.setColor($.Toybox.Graphics.COLOR_LT_GRAY, COLOR_BG);
-        drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.BATT_TRACK_START, $.LayoutGenerated.BATT_TRACK_END);
+        dc.setColor($.Toybox.Graphics.COLOR_DK_GRAY, COLOR_BG);
+        faceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.BATT_TRACK_START, $.LayoutGenerated.BATT_TRACK_END);
         
         dc.setColor(faceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
         var battFillAngle = (_batteryLevel / 100.0) * 90.0;
         if (battFillAngle > 0) {
-            drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_CLOCKWISE, $.LayoutGenerated.BATT_START, ($.LayoutGenerated.BATT_START - battFillAngle).toNumber());
+            faceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_CLOCKWISE, $.LayoutGenerated.BATT_START, ($.LayoutGenerated.BATT_START - battFillAngle).toNumber());
         }
 
         // Solar Arc
-        dc.setColor($.Toybox.Graphics.COLOR_LT_GRAY, COLOR_BG);
-        drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, $.LayoutGenerated.SOLAR_TRACK_END);
+        dc.setColor($.Toybox.Graphics.COLOR_DK_GRAY, COLOR_BG);
+        faceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, $.LayoutGenerated.SOLAR_TRACK_END);
         
         if (_solarIntensity > 0) {
             dc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
             var clampedIntensity = _solarIntensity > 100 ? 100.0 : _solarIntensity;
             var solarFillAngle = (clampedIntensity / 100.0) * 90.0;
-            drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, ($.LayoutGenerated.SOLAR_TRACK_START + solarFillAngle).toNumber());
+            faceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, ($.LayoutGenerated.SOLAR_TRACK_START + solarFillAngle).toNumber());
         }
-    }
-
-    private function drawSafeArc(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, radius as Number, direction as $.Toybox.Graphics.ArcDirection, start as Number, end as Number) as Void {
-        var totalAngle = 0;
-        if (direction == Graphics.ARC_COUNTER_CLOCKWISE) {
-            totalAngle = end - start;
-        } else {
-            totalAngle = start - end;
-        }
-        while (totalAngle < 0) { totalAngle += 360; }
-        if (totalAngle <= 0) { return; }
-
-        if (totalAngle <= 20) {
-            dc.drawArc(x, y, radius, direction, wrapAngle(start), wrapAngle(end));
-        } else {
-            var segments = (totalAngle / 20.0).toNumber() + 1;
-            var step = totalAngle.toFloat() / segments.toFloat();
-            var current = start.toFloat();
-            for (var i = 0; i < segments; i++) {
-                var next = (direction == Graphics.ARC_COUNTER_CLOCKWISE) ? (current + step) : (current - step);
-                dc.drawArc(x, y, radius, direction, wrapAngle(current.toNumber()), wrapAngle(next.toNumber()));
-                current = next;
-            }
-        }
-    }
-
-    private function wrapAngle(angle as Number) as Number {
-        var a = angle;
-        while (a < 0) { a += 360; }
-        while (a >= 360) { a -= 360; }
-        return a;
     }
 
     private function drawDebugOverlay(dc as $.Toybox.Graphics.Dc) as Void {
@@ -301,17 +274,17 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         dc.setColor($.Toybox.Graphics.COLOR_GREEN, COLOR_BG);
         
         // 2. Data Bounding Boxes
-        var timeH = dc.getFontHeight(FONT_TIME);
-        var dateH = dc.getFontHeight(FONT_SMALL);
         var yTimeUp = TOP_Y + 12; // Matches vertical padding in onUpdate
         
         // Clock & Date (Centered)
-        dc.drawRectangle(CX - dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME)/2, yTimeUp, dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME), timeH);
-        dc.drawRectangle(CX - dc.getTextWidthInPixels(_lastDateStr, FONT_SMALL)/2, (yTimeUp + timeH) - dateH, dc.getTextWidthInPixels(_lastDateStr, FONT_SMALL), dateH);
+        dc.drawRectangle(CX - dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME)/2, yTimeUp, dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME), _timeH);
+        dc.drawRectangle(CX - dc.getTextWidthInPixels(_lastDateStr, FONT_SMALL)/2, (yTimeUp + _timeH) - _dateH, dc.getTextWidthInPixels(_lastDateStr, FONT_SMALL), _dateH);
 
         // Heart Rate
-        var hrW = 28 + dc.getTextWidthInPixels(_lastHrStr, FONT_SMALL);
-        dc.drawRectangle(CX - hrW/2, Y_HR, hrW, 26);
+        var hrTextW = dc.getTextWidthInPixels(_lastHrStr, FONT_SMALL);
+        var totalHrW = 20 + 6 + hrTextW;
+        var hrStartX = $.LayoutGenerated.HR_X - 10;
+        dc.drawRectangle(hrStartX, Y_HR, totalHrW, 26);
 
         // Weather & Temp
         var condW = dc.getTextWidthInPixels(_lastCondStr, FONT_SMALL);
@@ -333,16 +306,22 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
     private function drawHeartIcon(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, color as Number) as Void {
         dc.setColor(color, COLOR_BG);
         dc.fillCircle(x - 5, y - 5, 5); dc.fillCircle(x + 5, y - 5, 5);
-        dc.fillPolygon([[x - 10, y - 2], [x + 10, y - 2], [x, y + 10]]);
+        var poly = $.LayoutGenerated.HEART_POLY;
+        var points = [
+            [x + poly[0][0], y + poly[0][1]],
+            [x + poly[1][0], y + poly[1][1]],
+            [x + poly[2][0], y + poly[2][1]]
+        ] as Array<[Numeric, Numeric]>;
+        dc.fillPolygon(points);
     }
 
     private function updateHeartRate() as Void {
         if ($.Toybox has :Activity) {
             var activityInfo = $.Toybox.Activity.getActivityInfo();
-            var rate = (activityInfo != null) ? activityInfo.currentHeartRate : null;
-            if (rate != _lastHrValue || _lastHrStr.equals("--")) {
+            var rate = (activityInfo != null) ? activityInfo.currentHeartRate : -1;
+            if (rate != _lastHrValue) {
                 _lastHrValue = (rate != null) ? rate as $.Toybox.Lang.Number : -1;
-                _lastHrStr = faceLogic.getHeartRateString(rate);
+                _lastHrStr = faceLogic.getHeartRateString(rate == -1 ? null : rate);
             }
         }
     }
@@ -372,7 +351,7 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         if (condition != null && (condition != _lastWeatherCondition || _lastCondStr.equals(""))) {
             _lastWeatherCondition = condition;
             var str = WeatherGenerated.getConditionString(condition);
-            _lastCondStr = (str == null) ? $.Toybox.WatchUi.loadResource($.Rez.Strings.weather_gen_condition_unknown) as String : str;
+            _lastCondStr = (str == null) ? _unknownStr : str;
             var condWidth = dc.getTextWidthInPixels(_lastCondStr, FONT_SMALL);
             if (condWidth > MAX_TEXT_WIDTH) {
                 var lines = faceLogic.splitString(_lastCondStr, dc, FONT_SMALL, MAX_TEXT_WIDTH);

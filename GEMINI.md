@@ -57,7 +57,12 @@ The project maintains a professional-grade **Alignment Overlay** to verify geome
 - **Visibility:** Uses high-contrast `COLOR_RED` for crosshairs and `COLOR_GREEN` for bounding boxes. 
 - **Sync:** The debug bounding boxes must always be updated to match the active vertical offsets (e.g., `yTimeUp`) used in the main rendering loop.
 
-## 4. Quality Assurance
+## 5. Quality Assurance
 
-- **Unit Tests:** `source/faceTests.mc` contains geometric validation tests. Every layout change must be verified by running `make test`.
-- **Target Target:** Always validate changes on the actual `fenix8solar47mm` hardware or simulator target. Values that look correct on other 260x260 devices (like Fenix 7) may fail on Fenix 8 due to the driver differences mentioned above.
+- **Unit Tests:** `source/faceTests.mc` contains geometric validation and string logic tests. 
+    - **`testWeatherWrappingExhaustive`**: Programmatically injects every SDK weather condition ID to verify that multi-line wrapping (`_isCondWrapped`) works correctly for all possible strings.
+- **Memory Profiling:**
+    - **`make heap-check`**: Runs the debug PRG in the simulator with the `-log` flag. This allows monitoring of peak memory usage. Aim to keep the watch face under **96KB** for maximum compatibility.
+- **Visual Alignment:**
+    - **`make run-align`**: Essential for verifying that bounding boxes correctly match the text offsets (e.g., `yTimeUp`).
+- **Target Verification:** Always validate changes on the actual `fenix8solar47mm` hardware. Drivers differ significantly even between 260x260 models.

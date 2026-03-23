@@ -33,12 +33,33 @@ BY=$CY
 SX=$((WIDTH - 18))
 SY=$CY
 
-# HR Icon/Text Layout (Static pre-calculation)
-# Heart icon is roughly 20px wide
-# Assuming Font height/width for planning (will be refined by dirty checking)
-# Let's anchor the HR group at CX
-HR_ICON_X=$((CX - 25))
-HR_TEXT_X=$((CX - 2))
+# Pre-calculate Solar Rays (8 rays, each: x1, y1, x2, y2)
+SOLAR_RAYS_MC="["
+for i in {0..7}; do
+    ang=$(awk "BEGIN { print $i * 45 * 0.0174532925 }") # degrees to radians
+    x1=$(awk "BEGIN { print ($ang == 0 ? 4.5 : cos($ang) * 4.5) }")
+    y1=$(awk "BEGIN { print ($ang == 0 ? 0 : sin($ang) * 4.5) }")
+    x2=$(awk "BEGIN { print ($ang == 0 ? 6.5 : cos($ang) * 6.5) }")
+    y2=$(awk "BEGIN { print ($ang == 0 ? 0 : sin($ang) * 6.5) }")
+    
+    # Rounded to 1 decimal place to minimize string size, converted to Number at runtime if needed, 
+    # but let's just use int if they are close. Or Float is fine.
+    SOLAR_RAYS_MC+="$(printf "[%.1f, %.1f, %.1f, %.1f]," $x1 $y1 $x2 $y2)"
+done
+SOLAR_RAYS_MC="${SOLAR_RAYS_MC%,}]"
+
+# HR Layout (Static Alignment)
+# Assuming typical 2-3 digit HR (average width ~32px)
+# Icon (20) + Gap (6) + Text (~32) = 58px total
+# CX - (58/2) = CX - 29
+HR_X=$((CX - 19)) # Center of 20px icon is 10px from start
+HR_TEXT_X=$((CX + 7)) # Start of text (CX - 29 + 20 + 6) = CX - 3, wait.
+# Let's re-calculate:
+# Start = CX - 29
+# Icon Center = Start + 10 = CX - 19
+# Text Start = Start + 20 + 6 = CX - 29 + 26 = CX - 3
+HR_X=$((CX - 19))
+HR_TEXT_X=$((CX - 3))
 
 cat << EOM > "$MC_OUT"
 // Auto-generated layout constants for ${WIDTH}x${HEIGHT}
@@ -68,10 +89,14 @@ module LayoutGenerated {
     const SX = $SX;
     const SY = $SY;
     
-    const HR_ICON_X = $HR_ICON_X;
+    const HR_X = $HR_X;
     const HR_TEXT_X = $HR_TEXT_X;
     
     const MAX_TEXT_WIDTH = 180;
+    
+    // Geometric constants
+    const HEART_POLY = [[-10, -2], [10, -2], [0, 10]];
+    const SOLAR_RAYS = $SOLAR_RAYS_MC;
 }
 EOM
 

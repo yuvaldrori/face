@@ -45,6 +45,37 @@ module faceLogic {
         return lastMinute != currentMinute;
     }
 
+    function wrapAngle(angle as $.Toybox.Lang.Number) as $.Toybox.Lang.Number {
+        var a = angle;
+        while (a < 0) { a += 360; }
+        while (a >= 360) { a -= 360; }
+        return a;
+    }
+
+    function drawSafeArc(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, radius as Number, direction as $.Toybox.Graphics.ArcDirection, start as Number, end as Number) as Void {
+        var totalAngle = 0;
+        if (direction == Graphics.ARC_COUNTER_CLOCKWISE) {
+            totalAngle = end - start;
+        } else {
+            totalAngle = start - end;
+        }
+        while (totalAngle < 0) { totalAngle += 360; }
+        if (totalAngle <= 0) { return; }
+
+        if (totalAngle <= 20) {
+            dc.drawArc(x, y, radius, direction, wrapAngle(start), wrapAngle(end));
+        } else {
+            var segments = (totalAngle / 20.0).toNumber() + 1;
+            var step = totalAngle.toFloat() / segments.toFloat();
+            var current = start.toFloat();
+            for (var i = 0; i < segments; i++) {
+                var next = (direction == Graphics.ARC_COUNTER_CLOCKWISE) ? (current + step) : (current - step);
+                dc.drawArc(x, y, radius, direction, wrapAngle(current.toNumber()), wrapAngle(next.toNumber()));
+                current = next;
+            }
+        }
+    }
+
     // Moved from faceView for testability
     function splitString(str as $.Toybox.Lang.String, dc as $.Toybox.Graphics.Dc, font as $.Toybox.Graphics.FontDefinition, maxWidth as $.Toybox.Lang.Number) as [$.Toybox.Lang.String, $.Toybox.Lang.String] {
         var words = [] as Array<String>;

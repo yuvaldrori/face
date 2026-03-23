@@ -85,3 +85,8 @@ test:
 	$(MONKEYC) $(COMMON_FLAGS) -f $(JUNGLE) -t -o $(TEST_PRG)
 	@ss -tuln | grep -q ":1234 " || (echo "Simulator not ready. Starting/Waiting..." && $(MAKE) simulator)
 	$(MONKEYDO) $(TEST_PRG) $(DEVICE) -t || ( [ $$? -eq 1 ] && echo "Tests completed (checking status above)..." )
+
+# Memory profiling (heap check)
+heap-check: debug
+	@ss -tuln | grep -q ":1234 " || (echo "Simulator not ready. Starting/Waiting..." && $(MAKE) simulator)
+	$(MONKEYDO) $(DEBUG_PRG) $(DEVICE) -log
