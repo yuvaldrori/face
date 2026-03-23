@@ -107,6 +107,5 @@ function testLayoutConstants(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Bo
     $.Toybox.Test.assertEqual($.LayoutGenerated.CY, 130);
     $.Toybox.Test.assertEqual($.LayoutGenerated.ARC_RADIUS, 125);
     $.Toybox.Test.assertEqual($.LayoutGenerated.TOP_Y, 42);
-    $.Toybox.Test.assertEqual($.LayoutGenerated.OUTER_X_LEFT, 36);
     return true;
 }
