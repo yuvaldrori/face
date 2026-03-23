@@ -79,7 +79,8 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
             // 4-bit palette (16 colors) for maximum efficiency on MIP
             var palette = [
                 Graphics.COLOR_BLACK, Graphics.COLOR_DK_GRAY, Graphics.COLOR_LT_GRAY, 
-                Graphics.COLOR_WHITE, Graphics.COLOR_YELLOW, Graphics.COLOR_RED
+                Graphics.COLOR_WHITE, Graphics.COLOR_YELLOW, Graphics.COLOR_RED,
+                Graphics.COLOR_GREEN
             ];
             _staticBuffer = $.Toybox.Graphics.createBufferedBitmap({
                 :width => $.LayoutGenerated.WIDTH,
@@ -135,6 +136,7 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         if (!(buffer instanceof $.Toybox.Graphics.BufferedBitmap)) { return; }
 
         var bDc = buffer.getDc();
+        if (_hasAntiAlias) { bDc.setAntiAlias(false); }
 
         bDc.setColor(COLOR_BG, COLOR_BG);
         bDc.clear();
