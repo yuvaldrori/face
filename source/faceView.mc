@@ -89,15 +89,15 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         var isFullUpdate = faceLogic.needsFullUpdate(_lastUpdateMinute, clockTime.min);
 
         // 1. Data Refresh (Smart Polling)
-        if (!_isLowPower || (clockTime.sec % 5 == 0)) { 
+        if (!_isLowPower) { 
             updateHeartRate(); 
         }
 
         if (isFullUpdate) {
             _lastUpdateMinute = clockTime.min;
             updateLongTermData(clockTime, dc);
+            if (_isLowPower) { updateHeartRate(); } // Only poll once per minute in sleep
         }
-
         // 2. Buffer Management (Redraw static elements if minute changed or buffer purged)
         if (isFullUpdate || _staticBuffer == null || _lastBufferMinute != clockTime.min) {
             drawStaticBackground();

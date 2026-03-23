@@ -25,7 +25,7 @@ Research and empirical testing confirmed that `onPartialUpdate` is ineffective o
 - **Strategy (Minimal Full Redraw):** Instead of fighting for partial updates, we use a "Minimal Full Redraw" model:
     - **Static Background Buffer:** A 4-bit (16-color) `BufferedBitmap` caches the ring tracks, icons, and labels. This is updated only once per minute or on wake.
     - **1Hz Redraw:** The main `onUpdate` loop performs a hardware-accelerated `drawBitmap` of the background and then overlays only the dynamic text (Clock, HR).
-    - **Smart Polling:** Heart Rate polling is reduced to every **5 seconds** when the watch is in low-power mode (`_isLowPower`), even if the display continues to refresh at 1Hz.
+    - **Smart Polling:** Heart Rate polling is reduced to **once per minute** (on the minute change) when the watch is in low-power mode (`_isLowPower`). Live 1Hz HR polling occurs only when the user is actively viewing the face.
 
 ### Ultra-Safe Arcs (Hardware Stability)
 Directly calling `dc.drawArc()` with large spans or crossing the 0/360-degree boundary can trigger a hardware driver failure that renders a muddy "orange circle" artifact.
