@@ -5,6 +5,10 @@
 
 # Garmin Generated Files
 source/weatherGenerated.mc
+source/layoutGenerated.mc
 resources/strings/weather_gen.xml
 bin/*.prg
 bin/*.debug.xml
+
+# UI Artifacts
+*.png
