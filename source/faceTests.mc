@@ -226,3 +226,30 @@ function testLayoutConstants(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Bo
     $.Toybox.Test.assertEqual($.LayoutGenerated.TOP_Y, 42);
     return true;
 }
+(:test)
+function testPaletteCompleteness(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    var palette = faceLogic.getRequiredPalette();
+    
+    // Check Battery Colors
+    var lowBatt = faceLogic.getBatteryColor(10.0);
+    var highBatt = faceLogic.getBatteryColor(50.0);
+    
+    var foundLow = false;
+    var foundHigh = false;
+    for (var i = 0; i < palette.size(); i++) {
+        if (palette[i] == lowBatt) { foundLow = true; }
+        if (palette[i] == highBatt) { foundHigh = true; }
+    }
+    
+    if (!foundLow) { logger.error("Battery LOW color (RED) missing from palette"); return false; }
+    if (!foundHigh) { logger.error("Battery HIGH color (GREEN) missing from palette"); return false; }
+    
+    // Check Solar color (Yellow)
+    var foundYellow = false;
+    for (var i = 0; i < palette.size(); i++) {
+        if (palette[i] == $.Toybox.Graphics.COLOR_YELLOW) { foundYellow = true; }
+    }
+    if (!foundYellow) { logger.error("Solar color (YELLOW) missing from palette"); return false; }
+
+    return true;
+}

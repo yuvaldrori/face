@@ -8,6 +8,18 @@ import Toybox.Graphics;
 module faceLogic {
     // Icons will be drawn manually in faceView.mc to avoid font compatibility issues
     
+    function getRequiredPalette() as Array<$.Toybox.Graphics.ColorValue> {
+        return [
+            $.Toybox.Graphics.COLOR_BLACK,
+            $.Toybox.Graphics.COLOR_DK_GRAY,
+            $.Toybox.Graphics.COLOR_LT_GRAY,
+            $.Toybox.Graphics.COLOR_WHITE,
+            $.Toybox.Graphics.COLOR_YELLOW,
+            $.Toybox.Graphics.COLOR_RED,
+            $.Toybox.Graphics.COLOR_GREEN
+        ];
+    }
+
     function getHeartRateString(rate as $.Toybox.Lang.Number?) as $.Toybox.Lang.String {
         return (rate != null ? rate.toString() : "--");
     }
