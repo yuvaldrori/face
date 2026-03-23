@@ -16,12 +16,16 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
     private var _batteryLevel as $.Toybox.Lang.Float = 0.0;
     private var _isLowPower as $.Toybox.Lang.Boolean = true;
     
+    // Background Buffer (Arcs only)
+    private var _bgBuffer as $.Toybox.Graphics.BufferedBitmapReference? = null;
+    
     // Value Tracking
     private var _lastHrValue as $.Toybox.Lang.Number = -1;
     private var _lastWeatherCondition as $.Toybox.Lang.Integer = -1;
     private var _lastTempValue as $.Toybox.Lang.Number? = null;
     private var _lastBattLevel as $.Toybox.Lang.Float = -1.0;
     private var _lastBattDays as $.Toybox.Lang.Float = -1.0;
+    private var _lastSolarValue as $.Toybox.Lang.Number = -1;
 
     // Cached Layout Values
     private var _clockRightX as $.Toybox.Lang.Number = 130;
@@ -37,7 +41,7 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
     private var _lastCondStr as $.Toybox.Lang.String = "";
     private var _lastTempStr as $.Toybox.Lang.String = "";
 
-    // Global Constants from Generated Layout
+    // Global Constants (Fenix 8 47mm 260x260)
     private const CX = $.LayoutGenerated.CX; 
     private const TOP_Y = $.LayoutGenerated.TOP_Y;
     private const OUTER_X_LEFT = $.LayoutGenerated.OUTER_X_LEFT;
@@ -65,6 +69,16 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
     }
 
     function onLayout(dc as $.Toybox.Graphics.Dc) as Void {
+        var palette = [
+            Graphics.COLOR_BLACK, Graphics.COLOR_WHITE, 
+            Graphics.COLOR_DK_GRAY, Graphics.COLOR_LT_GRAY, 
+            Graphics.COLOR_YELLOW, Graphics.COLOR_RED, Graphics.COLOR_GREEN
+        ];
+        
+        if ($.Toybox.Graphics has :createBufferedBitmap) {
+            _bgBuffer = $.Toybox.Graphics.createBufferedBitmap({ :width => 260, :height => 260, :palette => palette });
+        }
+        
         var clockTime = $.Toybox.System.getClockTime();
         updateLongTermData(clockTime, dc);
         updateHeartRate();
@@ -74,48 +88,34 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         var clockTime = $.Toybox.System.getClockTime();
         var isFullUpdate = faceLogic.needsFullUpdate(_lastUpdateMinute, clockTime.min);
         
-        // Data Updates (Sensor polling only in High Power)
         if (!_isLowPower) { updateHeartRate(); }
         if (isFullUpdate) {
             _lastUpdateMinute = clockTime.min;
             updateLongTermData(clockTime, dc);
         }
 
-        // 1. Bulletproof Clear Screen
-        dc.setColor(COLOR_BG, COLOR_BG);
-        dc.clear();
-        
-        // 2. Render Arcs using Safe-Segment Logic
-        dc.setPenWidth(ARC_PEN_WIDTH);
-        
-        // Battery Arc (Left: 225 clockwise to BATT_END_DEG)
-        dc.setColor($.Toybox.Graphics.COLOR_DK_GRAY, $.Toybox.Graphics.COLOR_TRANSPARENT);
-        drawSafeArc(dc, CX, CX, ARC_RADIUS, $.Toybox.Graphics.ARC_CLOCKWISE, BATT_START, BATT_END_DEG);
-        
-        var battColor = faceLogic.getBatteryColor(_lastBattLevel);
-        dc.setColor(battColor, $.Toybox.Graphics.COLOR_TRANSPARENT);
-        var battTotalAngle = BATT_START - BATT_END_DEG;
-        var battFillAngle = (_batteryLevel / 100.0) * battTotalAngle;
-        if (battFillAngle > 0) {
-            drawSafeArc(dc, CX, CX, ARC_RADIUS, $.Toybox.Graphics.ARC_CLOCKWISE, BATT_START, (BATT_START - battFillAngle).toNumber());
+        // 1. Buffer Management (Redraw Arcs if data changed or buffer purged)
+        if (isFullUpdate || _bgBuffer == null) {
+            drawBackgroundToBuffer();
         }
 
-        // Solar Arc (Right: 315 counter-clockwise to 45)
-        dc.setColor($.Toybox.Graphics.COLOR_DK_GRAY, $.Toybox.Graphics.COLOR_TRANSPARENT);
-        drawSafeArc(dc, CX, CX, ARC_RADIUS, $.Toybox.Graphics.ARC_COUNTER_CLOCKWISE, 315, 405); // 405 = 45 across 0
-        
-        if (_solarIntensity > 0) {
-            dc.setColor($.Toybox.Graphics.COLOR_ORANGE, $.Toybox.Graphics.COLOR_TRANSPARENT);
-            var clampedIntensity = _solarIntensity > 100 ? 100.0 : _solarIntensity;
-            var solarFillAngle = (clampedIntensity / 100.0) * 90.0;
-            drawSafeArc(dc, CX, CX, ARC_RADIUS, $.Toybox.Graphics.ARC_COUNTER_CLOCKWISE, 315, (315 + solarFillAngle).toNumber());
+        // 2. Render Background Arcs
+        var bufferRef = _bgBuffer;
+        if (bufferRef != null) {
+            var buffer = bufferRef.get();
+            if (buffer instanceof $.Toybox.Graphics.BufferedBitmap) {
+                dc.drawBitmap(0, 0, buffer);
+            }
+        } else {
+            dc.setColor(COLOR_BG, COLOR_BG);
+            dc.clear();
         }
-
-        // 3. Render Dynamic UI
+        
+        // 3. Render All Text directly to Screen DC (For Anti-Aliasing and Hardware Stability)
         if (_hasAntiAlias) { dc.setAntiAlias(true); }
         dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
         
-        // Battery Days
+        // Battery Label
         var fontHeightTiny = dc.getFontHeight(FONT_TINY);
         dc.drawText(OUTER_X_LEFT, TOP_Y + (fontHeightTiny / 2), FONT_TINY, _lastBattDaysShortStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT | $.Toybox.Graphics.TEXT_JUSTIFY_VCENTER);
 
@@ -145,7 +145,41 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         if ($.DEBUG_ALIGNMENT) { drawDebugOverlay(dc); }
     }
 
-    // Helper: Splits large arcs into segments to bypass 0-degree discontinuity bug in hardware
+    private function drawBackgroundToBuffer() as Void {
+        var bufferRef = _bgBuffer;
+        if (bufferRef == null) { return; }
+        var buffer = bufferRef.get();
+        if (!(buffer instanceof $.Toybox.Graphics.BufferedBitmap)) { return; }
+        
+        var bDc = buffer.getDc();
+        bDc.setColor(COLOR_BG, COLOR_BG);
+        bDc.fillRectangle(0, 0, 260, 260); 
+        
+        bDc.setPenWidth(ARC_PEN_WIDTH);
+        
+        // 1. Battery Arc (Left)
+        bDc.setColor($.Toybox.Graphics.COLOR_DK_GRAY, COLOR_BG);
+        drawSafeArc(bDc, CX, CX, ARC_RADIUS, Graphics.ARC_CLOCKWISE, BATT_START, BATT_END_DEG);
+        
+        bDc.setColor(faceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
+        var battTotalAngle = BATT_START - BATT_END_DEG;
+        var battFillAngle = (_batteryLevel / 100.0) * battTotalAngle;
+        if (battFillAngle > 0) {
+            drawSafeArc(bDc, CX, CX, ARC_RADIUS, Graphics.ARC_CLOCKWISE, BATT_START, (BATT_START - battFillAngle).toNumber());
+        }
+
+        // 2. Solar Arc (Right) - Using YELLOW for high MIP visibility
+        bDc.setColor($.Toybox.Graphics.COLOR_DK_GRAY, COLOR_BG);
+        drawSafeArc(bDc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, 315, 405); 
+        
+        if (_solarIntensity > 0) {
+            bDc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
+            var clampedIntensity = _solarIntensity > 100 ? 100.0 : _solarIntensity;
+            var solarFillAngle = (clampedIntensity / 100.0) * 90.0;
+            drawSafeArc(bDc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, 315, (315 + solarFillAngle).toNumber());
+        }
+    }
+
     private function drawSafeArc(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, radius as Number, direction as $.Toybox.Graphics.ArcDirection, start as Number, end as Number) as Void {
         var diff = (end - start).abs();
         if (diff <= 45) {
@@ -164,15 +198,8 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
 
     private function drawDebugOverlay(dc as $.Toybox.Graphics.Dc) as Void {
         dc.setPenWidth(1);
-        
-        // Full circular boundaries
-        dc.setColor($.Toybox.Graphics.COLOR_LT_GRAY, $.Toybox.Graphics.COLOR_TRANSPARENT);
-        dc.drawCircle(CX, CX, 129); // Screen edge
-        dc.setColor($.Toybox.Graphics.COLOR_DK_GRAY, $.Toybox.Graphics.COLOR_TRANSPARENT);
-        dc.drawCircle(CX, CX, ARC_RADIUS); // Arc track
-
         dc.setColor($.Toybox.Graphics.COLOR_BLUE, $.Toybox.Graphics.COLOR_TRANSPARENT);
-        dc.drawLine(CX, 0, CX, 260); // Vertical Center
+        dc.drawLine(CX, 0, CX, 260); // V-Center
         
         var deltaY = ARC_RADIUS * 0.7071; // 45 degrees
         var topY = CX - deltaY;
@@ -242,7 +269,10 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         }
         if (stats has :solarIntensity) {
             var intensity = stats.solarIntensity;
-            _solarIntensity = (intensity != null) ? intensity as $.Toybox.Lang.Number : 0;
+            if (intensity != _lastSolarValue) {
+                _lastSolarValue = (intensity != null) ? intensity as $.Toybox.Lang.Number : 0;
+                _solarIntensity = _lastSolarValue;
+            }
         }
         _lastTimeStr = faceLogic.getTimeString(clockTime.hour as $.Toybox.Lang.Number, clockTime.min as $.Toybox.Lang.Number);
         _clockRightX = CX + (dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME) / 2);
