@@ -136,7 +136,6 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         if (!(buffer instanceof $.Toybox.Graphics.BufferedBitmap)) { return; }
 
         var bDc = buffer.getDc();
-        if (_hasAntiAlias) { bDc.setAntiAlias(false); }
 
         bDc.setColor(COLOR_BG, COLOR_BG);
         bDc.clear();
