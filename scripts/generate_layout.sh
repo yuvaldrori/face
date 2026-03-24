@@ -9,13 +9,18 @@ HEIGHT=${2:-260}
 MC_OUT="source/layoutGenerated.mc"
 
 # Core Centers
-CX=$((WIDTH / 2))
-CY=$((HEIGHT / 2))
+CX=$(awk "BEGIN { print $WIDTH / 2 }")
+CY=$(awk "BEGIN { print $HEIGHT / 2 }")
+
+# Math Constants
+PI=$(awk "BEGIN { print atan2(0, -1) }")
+DEG_TO_RAD=$(awk "BEGIN { print $PI / 180 }")
 
 # Display Metrics
 # Arcs are positioned 5px from the edge to avoid display clipping on some bezel variants
-ARC_RADIUS=$((CX - 5))
-SCREEN_RADIUS=$((CX - 1))
+ARC_MARGIN=5
+ARC_RADIUS=$(awk "BEGIN { print $CX - $ARC_MARGIN }")
+SCREEN_RADIUS=$(awk "BEGIN { print $CX - 1 }")
 
 # Font Specifications (Pixel Heights for Fenix 8 47mm Solar)
 # Source: https://developer.garmin.com/connect-iq/device-reference/fenix8solar47mm/
@@ -25,25 +30,27 @@ FONT_SMALL_H=32   # FONT_SMALL (Roboto Condensed Bold)
 # Geometric Layout Formulas:
 
 # 1. TOP_Y: The horizontal line connecting the top-most points of the left/right arcs (at 45 degree angle).
-# Calculation: CY - (Radius * sin(45°)) -> CY - (Radius * 0.7071)
-# 0.70710678 = sin(45°)
-TOP_Y=$(awk "BEGIN { print int($CY - ($ARC_RADIUS * 0.70710678) + 0.5) }")
+# Calculation: CY - (Radius * sin(45°))
+SIN_45=$(awk "BEGIN { print sin(45 * $DEG_TO_RAD) }")
+TOP_Y=$(awk "BEGIN { print int($CY - ($ARC_RADIUS * $SIN_45) + 0.5) }")
 
 # 2. ICON_Y: Centered vertically with the Date string for balanced glyph/text alignment.
 # Date Y position logic: Top field (Time) + Time height - overlap padding for Date.
-DATE_Y=$((TOP_Y + FONT_TIME_H - FONT_SMALL_H))
+DATE_Y=$(awk "BEGIN { print $TOP_Y + $FONT_TIME_H - $FONT_SMALL_H }")
 ICON_Y=$(awk "BEGIN { print int($DATE_Y + ($FONT_SMALL_H / 2) + 0.5) }")
 
 # 3. Dynamic Field Y-Positions (Calculated relative to core metrics)
 # Y_HR: Positioned above the clock, within the top arc span.
-Y_HR=$(awk "BEGIN { print $TOP_Y - 30 }") 
+HR_V_OFFSET=30
+Y_HR=$(awk "BEGIN { print $TOP_Y - $HR_V_OFFSET }") 
 
 # Y_TEMP: Positioned at the very bottom, just inside the screen boundary.
 # Subtract height and add 1px buffer to ensure it doesn't clip the bottom edge.
 Y_TEMP=$(awk "BEGIN { print $HEIGHT - $FONT_SMALL_H + 1 }")
 
 # Y_COND: Positioned above the temperature with standard vertical spacing (26px offset).
-Y_COND=$(awk "BEGIN { print $Y_TEMP - 26 }")
+COND_V_SPACING=26
+Y_COND=$(awk "BEGIN { print $Y_TEMP - $COND_V_SPACING }")
 
 # Arcs (Angles in Degrees, standard Connect IQ 0-360 range)
 ARC_PEN_WIDTH=6
@@ -58,8 +65,6 @@ BATT_START=$BATT_TRACK_END
 # Right Arc: Solar (Centered at 0° [East], spanning 90°)
 SOLAR_SPAN=90
 SOLAR_CENTER=0
-# Note: SOLAR_TRACK_START will be -45 (315), handled by faceLogic.wrapAngle if needed, 
-# but we'll calculate it statically for the jungle/generated constants.
 SOLAR_TRACK_START=$(awk "BEGIN { start = $SOLAR_CENTER - ($SOLAR_SPAN / 2); if (start < 0) { start += 360 }; print start }")
 SOLAR_TRACK_END=$(awk "BEGIN { print $SOLAR_CENTER + ($SOLAR_SPAN / 2) + 360 }") # Handle wrap for logic (405)
 
@@ -77,26 +82,29 @@ SX=$(awk "BEGIN { print $WIDTH - $ICON_MARGIN }")
 # Pre-calculate Solar Rays (8 rays, each: x1, y1, x2, y2)
 # Generates a static array to eliminate runtime trigonometric overhead.
 SOLAR_RAYS_MC="["
+RAY_INNER_R=$(awk "BEGIN { print $SUN_R + 3 }")
+RAY_OUTER_R=$(awk "BEGIN { print $SUN_R + 6 }")
 for i in {0..7}; do
-    ang=$(awk "BEGIN { print $i * 45 * 0.0174532925 }") # degrees to radians
-    # Ray span: from R+3 to R+6
-    x1=$(awk "BEGIN { print ($ang == 0 ? 8.0 : cos($ang) * 8.0) }")
-    y1=$(awk "BEGIN { print ($ang == 0 ? 0 : sin($ang) * 8.0) }")
-    x2=$(awk "BEGIN { print ($ang == 0 ? 11.0 : cos($ang) * 11.0) }")
-    y2=$(awk "BEGIN { print ($ang == 0 ? 0 : sin($ang) * 11.0) }")
+    ang=$(awk "BEGIN { print $i * 45 * $DEG_TO_RAD }")
+    x1=$(awk "BEGIN { res = cos($ang) * $RAY_INNER_R; printf \"%.1f\", (res > -0.05 && res < 0.05) ? 0 : res }")
+    y1=$(awk "BEGIN { res = sin($ang) * $RAY_INNER_R; printf \"%.1f\", (res > -0.05 && res < 0.05) ? 0 : res }")
+    x2=$(awk "BEGIN { res = cos($ang) * $RAY_OUTER_R; printf \"%.1f\", (res > -0.05 && res < 0.05) ? 0 : res }")
+    y2=$(awk "BEGIN { res = sin($ang) * $RAY_OUTER_R; printf \"%.1f\", (res > -0.05 && res < 0.05) ? 0 : res }")
     
-    SOLAR_RAYS_MC+="$(printf "[%.1f, %.1f, %.1f, %.1f]," $x1 $y1 $x2 $y2)"
+    SOLAR_RAYS_MC+="[$x1, $y1, $x2, $y2],"
 done
 SOLAR_RAYS_MC="${SOLAR_RAYS_MC%,}]"
 
 # HR Layout (Static Alignment)
 # Logic: Center the [Icon + Gap + Text] group horizontally.
-# Approx width for 3-digit HR: 20 (icon) + 6 (gap) + 32 (text) = 58px.
-# Start X = CX - (58 / 2) = CX - 29.
-# HR_X (Icon Center) = Start X + 10 = CX - 19.
-# HR_TEXT_X (Text Start) = Start X + 26 = CX - 3.
-HR_X=$(awk "BEGIN { print $CX - 19 }")
-HR_TEXT_X=$(awk "BEGIN { print $CX - 3 }")
+HR_ICON_W=20
+HR_GAP=6
+HR_TEXT_EST_W=32
+HR_TOTAL_W=$(awk "BEGIN { print $HR_ICON_W + $HR_GAP + $HR_TEXT_EST_W }")
+HR_START_X=$(awk "BEGIN { print $CX - ($HR_TOTAL_W / 2) }")
+
+HR_X=$(awk "BEGIN { print $HR_START_X + ($HR_ICON_W / 2) }")
+HR_TEXT_X=$(awk "BEGIN { print $HR_START_X + $HR_ICON_W + $HR_GAP }")
 
 cat << EOM > "$MC_OUT"
 // Auto-generated layout constants for ${WIDTH}x${HEIGHT}
