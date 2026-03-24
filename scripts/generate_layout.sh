@@ -16,10 +16,11 @@ TOP_Y=$(awk "BEGIN { print int($CY - ($ARC_RADIUS * 0.70710678) + 0.5) }")
 
 # 2. ICON_Y: Aligned with the center of the date string.
 # On Fenix 8 47mm (260x260): 
-# FONT_NUMBER_THAI_HOT height is ~96px. FONT_SMALL height is ~26px.
-# Date Y = (TOP_Y + TIME_H) - DATE_H = (42 + 96) - 26 = 112.
-# Date Center = 112 + (26/2) = 112 + 13 = 125.
-ICON_Y=125
+# FONT_NUMBER_THAI_HOT (FONT_TIME) height is 121px. 
+# FONT_SMALL (FONT_DATE) height is 32px.
+# Date Y = (TOP_Y + TIME_H) - DATE_H = (42 + 121) - 32 = 131.
+# Date Center = 131 + (32/2) = 131 + 16 = 147.
+ICON_Y=147
 
 # Additional UI positions
 Y_HR=12
