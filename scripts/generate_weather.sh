@@ -19,8 +19,8 @@ cat << EOM > "$XML_OUT"
 EOM
 
 for c in $CONDITIONS; do
-    # Simple capitalization: remove prefix, replace _ with space, lowercase, then capitalize words
-    label=$(echo "$c" | sed 's/CONDITION_//' | tr '_' ' ' | tr '[:upper:]' '[:lower:]' | awk '{for(i=1;i<=NF;i++)sub(/./,toupper(substr($i,1,1)),$i)}1')
+    # Capitalize only the first letter of the first word: remove prefix, replace _ with space, lowercase, then upper first char
+    label=$(echo "$c" | sed 's/CONDITION_//' | tr '_' ' ' | tr '[:upper:]' '[:lower:]' | sed 's/./\U&/')
     res_id="weather_gen_$(echo "$c" | tr '[:upper:]' '[:lower:]')"
     echo "    <string id=\"$res_id\">$label</string>" >> "$XML_OUT"
 done
