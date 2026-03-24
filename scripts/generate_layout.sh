@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Garmin Connect IQ Layout Generator for Fenix 8 47mm Solar (MIP)
-# Device Reference: https://developer.garmin.com/connect-iq/reference-guides/device-reference/#fenix8solar47mm
+# Device Reference: https://developer.garmin.com/connect-iq/reference-guides/devices/fenix8solar47mm/
 
 WIDTH=${1:-260}
 HEIGHT=${2:-260}
@@ -17,7 +17,7 @@ ARC_RADIUS=$((CX - 5))
 SCREEN_RADIUS=$((CX - 1))
 
 # Font Specifications (Pixel Heights for Fenix 8 47mm Solar)
-# Source: https://developer.garmin.com/connect-iq/reference-guides/device-reference/#fenix8solar47mm
+# Source: https://developer.garmin.com/connect-iq/reference-guides/devices/fenix8solar47mm/
 FONT_TIME_H=121   # FONT_NUMBER_THAI_HOT (Bionic Semibold)
 FONT_SMALL_H=32   # FONT_SMALL (Roboto Condensed Bold)
 
