@@ -179,7 +179,7 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         if (_hasAntiAlias) { dc.setAntiAlias(true); }
         dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
 
-        var yTimeUp = TOP_Y + 12;
+        var yTimeUp = TOP_Y;
 
         dc.drawText(CX, yTimeUp, FONT_TIME,  _lastTimeStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(CX, (yTimeUp + _timeH) - _dateH, FONT_SMALL, _lastDateStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
@@ -270,7 +270,7 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         dc.setColor($.Toybox.Graphics.COLOR_GREEN, COLOR_BG);
         
         // 2. Data Bounding Boxes
-        var yTimeUp = TOP_Y + 12; // Matches vertical padding in onUpdate
+        var yTimeUp = TOP_Y; // Matches vertical padding in onUpdate
         
         // Clock & Date (Centered)
         dc.drawRectangle(CX - dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME)/2, yTimeUp, dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME), _timeH);
