@@ -6,7 +6,6 @@ import Toybox.Time;
 import Toybox.Time.Gregorian;
 import Toybox.Weather;
 import Toybox.Activity;
-import Toybox.Math;
 
 class faceView extends $.Toybox.WatchUi.WatchFace {
 
@@ -156,23 +155,27 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         }
 
         // C. Static Icons
-        bDc.setPenWidth(1);
+        drawStaticIcons(bDc);
+    }
+
+    private function drawStaticIcons(dc as $.Toybox.Graphics.Dc) as Void {
+        dc.setPenWidth(1);
         var bx = $.LayoutGenerated.BX; var by = $.LayoutGenerated.BY;
         var bw = $.LayoutGenerated.BATT_W; var bh = $.LayoutGenerated.BATT_H;
-        bDc.setColor($.Toybox.Graphics.COLOR_LT_GRAY, COLOR_BG);
-        bDc.drawRectangle(bx - (bw/2), by - (bh/2), bw, bh);
-        bDc.fillRectangle(bx - 2, by - (bh/2) - 2, 4, 2); 
-        bDc.setColor(faceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
+        dc.setColor($.Toybox.Graphics.COLOR_LT_GRAY, COLOR_BG);
+        dc.drawRectangle(bx - (bw/2), by - (bh/2), bw, bh);
+        dc.fillRectangle(bx - 2, by - (bh/2) - 2, 4, 2); 
+        dc.setColor(faceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
         var fillH = ($.LayoutGenerated.BATT_FILL_MAX_H * (_batteryLevel / 100.0)).toNumber();
-        if (fillH > 0) { bDc.fillRectangle(bx - (bw/2) + 1, by + (bh/2) - 1 - fillH, bw - 2, fillH); }
+        if (fillH > 0) { dc.fillRectangle(bx - (bw/2) + 1, by + (bh/2) - 1 - fillH, bw - 2, fillH); }
 
         var sx = $.LayoutGenerated.SX; var sy = $.LayoutGenerated.SY;
-        bDc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
-        bDc.fillCircle(sx, sy, $.LayoutGenerated.SUN_R);
+        dc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
+        dc.fillCircle(sx, sy, $.LayoutGenerated.SUN_R);
         var rays = $.LayoutGenerated.SOLAR_RAYS;
         for (var i = 0; i < rays.size(); i++) {
             var r = rays[i];
-            bDc.drawLine(sx + r[0], sy + r[1], sx + r[2], sy + r[3]);
+            dc.drawLine(sx + r[0], sy + r[1], sx + r[2], sy + r[3]);
         }
     }
 
@@ -207,24 +210,7 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         dc.clear();
         renderArcsDirectly(dc);
         // Icons
-        dc.setPenWidth(1);
-        var bx = $.LayoutGenerated.BX; var by = $.LayoutGenerated.BY;
-        var bw = $.LayoutGenerated.BATT_W; var bh = $.LayoutGenerated.BATT_H;
-        dc.setColor($.Toybox.Graphics.COLOR_LT_GRAY, COLOR_BG);
-        dc.drawRectangle(bx - (bw/2), by - (bh/2), bw, bh);
-        dc.fillRectangle(bx - 2, by - (bh/2) - 2, 4, 2); 
-        dc.setColor(faceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
-        var fillH = ($.LayoutGenerated.BATT_FILL_MAX_H * (_batteryLevel / 100.0)).toNumber();
-        if (fillH > 0) { dc.fillRectangle(bx - (bw/2) + 1, by + (bh/2) - 1 - fillH, bw - 2, fillH); }
-
-        var sx = $.LayoutGenerated.SX; var sy = $.LayoutGenerated.SY;
-        dc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
-        dc.fillCircle(sx, sy, $.LayoutGenerated.SUN_R);
-        var rays = $.LayoutGenerated.SOLAR_RAYS;
-        for (var i = 0; i < rays.size(); i++) {
-            var r = rays[i];
-            dc.drawLine(sx + r[0], sy + r[1], sx + r[2], sy + r[3]);
-        }
+        drawStaticIcons(dc);
     }
 
     private function renderArcsDirectly(dc as $.Toybox.Graphics.Dc) as Void {

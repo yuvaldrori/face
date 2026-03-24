@@ -1,8 +1,5 @@
 import Toybox.Lang;
-import Toybox.System;
-import Toybox.Time;
 import Toybox.Time.Gregorian;
-import Toybox.Weather;
 import Toybox.Graphics;
 
 module faceLogic {
@@ -22,15 +19,6 @@ module faceLogic {
 
     function getHeartRateString(rate as $.Toybox.Lang.Number?) as $.Toybox.Lang.String {
         return (rate != null ? rate.toString() : "--");
-    }
-
-    function getBatteryString(batteryLevel as $.Toybox.Lang.Float, batteryInDays as $.Toybox.Lang.Float?) as $.Toybox.Lang.String {
-        var days = (batteryInDays != null) ? batteryInDays.format("%d") : "--";
-        return $.Toybox.Lang.format("$1$ days", [days]);
-    }
-
-    function getBatteryDaysShortString(batteryInDays as $.Toybox.Lang.Float?) as $.Toybox.Lang.String {
-        return (batteryInDays != null ? batteryInDays.format("%d") : "--") + "d";
     }
 
     function getBatteryColor(level as $.Toybox.Lang.Float) as $.Toybox.Graphics.ColorValue {

@@ -80,13 +80,6 @@ function testWrapAngle(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean 
 }
 
 (:test)
-function testBatteryString(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    $.Toybox.Test.assertEqual(faceLogic.getBatteryString(100.0, 21.0), "21 days");
-    $.Toybox.Test.assertEqual(faceLogic.getBatteryString(50.0, null), "-- days");
-    return true;
-}
-
-(:test)
 function testTimeString(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     $.Toybox.Test.assertEqual(faceLogic.getTimeString(13, 5), "13:05");
     $.Toybox.Test.assertEqual(faceLogic.getTimeString(0, 0), "0:00");
@@ -112,14 +105,6 @@ function testBatteryColorLogic(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.
     $.Toybox.Test.assertEqual(faceLogic.getBatteryColor(21.0), $.Toybox.Graphics.COLOR_GREEN);
     $.Toybox.Test.assertEqual(faceLogic.getBatteryColor(20.0), $.Toybox.Graphics.COLOR_RED);
     $.Toybox.Test.assertEqual(faceLogic.getBatteryColor(5.0), $.Toybox.Graphics.COLOR_RED);
-    return true;
-}
-
-(:test)
-function testBatteryShortFormat(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    $.Toybox.Test.assertEqual(faceLogic.getBatteryDaysShortString(20.5), "20d");
-    $.Toybox.Test.assertEqual(faceLogic.getBatteryDaysShortString(1.0), "1d");
-    $.Toybox.Test.assertEqual(faceLogic.getBatteryDaysShortString(null), "--d");
     return true;
 }
 
