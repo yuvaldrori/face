@@ -28,19 +28,19 @@ SOLAR_TRACK_START=315
 SOLAR_TRACK_END=405 # 315 + 90 (handles wrap-around)
 
 # Icon positions
-BX=18
+BX=24
 BY=$CY
-SX=$((WIDTH - 18))
+SX=$((WIDTH - 24))
 SY=$CY
 
 # Pre-calculate Solar Rays (8 rays, each: x1, y1, x2, y2)
 SOLAR_RAYS_MC="["
 for i in {0..7}; do
     ang=$(awk "BEGIN { print $i * 45 * 0.0174532925 }") # degrees to radians
-    x1=$(awk "BEGIN { print ($ang == 0 ? 4.5 : cos($ang) * 4.5) }")
-    y1=$(awk "BEGIN { print ($ang == 0 ? 0 : sin($ang) * 4.5) }")
-    x2=$(awk "BEGIN { print ($ang == 0 ? 6.5 : cos($ang) * 6.5) }")
-    y2=$(awk "BEGIN { print ($ang == 0 ? 0 : sin($ang) * 6.5) }")
+    x1=$(awk "BEGIN { print ($ang == 0 ? 8.0 : cos($ang) * 8.0) }")
+    y1=$(awk "BEGIN { print ($ang == 0 ? 0 : sin($ang) * 8.0) }")
+    x2=$(awk "BEGIN { print ($ang == 0 ? 11.0 : cos($ang) * 11.0) }")
+    y2=$(awk "BEGIN { print ($ang == 0 ? 0 : sin($ang) * 11.0) }")
     
     # Rounded to 1 decimal place to minimize string size, converted to Number at runtime if needed, 
     # but let's just use int if they are close. Or Float is fine.
