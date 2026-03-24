@@ -35,14 +35,14 @@ ICON_Y=$(awk "BEGIN { print int($DATE_Y + ($FONT_SMALL_H / 2) + 0.5) }")
 
 # 3. Dynamic Field Y-Positions (Calculated relative to core metrics)
 # Y_HR: Positioned above the clock, within the top arc span.
-Y_HR=$((TOP_Y - 30)) 
+Y_HR=$(awk "BEGIN { print $TOP_Y - 30 }") 
 
 # Y_TEMP: Positioned at the very bottom, just inside the screen boundary.
 # Subtract height and add 1px buffer to ensure it doesn't clip the bottom edge.
-Y_TEMP=$((HEIGHT - FONT_SMALL_H + 1))
+Y_TEMP=$(awk "BEGIN { print $HEIGHT - $FONT_SMALL_H + 1 }")
 
 # Y_COND: Positioned above the temperature with standard vertical spacing (26px offset).
-Y_COND=$((Y_TEMP - 26))
+Y_COND=$(awk "BEGIN { print $Y_TEMP - 26 }")
 
 # Arcs (Angles in Degrees, standard Connect IQ 0-360 range)
 ARC_PEN_WIDTH=6
@@ -71,7 +71,7 @@ SUN_R=5
 # Icon Horizontal Positions (Calculated for symmetrical spacing from edges)
 ICON_MARGIN=24
 BX=$ICON_MARGIN
-SX=$((WIDTH - ICON_MARGIN))
+SX=$(awk "BEGIN { print $WIDTH - $ICON_MARGIN }")
 
 # Pre-calculate Solar Rays (8 rays, each: x1, y1, x2, y2)
 # Generates a static array to eliminate runtime trigonometric overhead.
@@ -94,8 +94,8 @@ SOLAR_RAYS_MC="${SOLAR_RAYS_MC%,}]"
 # Start X = CX - (58 / 2) = CX - 29.
 # HR_X (Icon Center) = Start X + 10 = CX - 19.
 # HR_TEXT_X (Text Start) = Start X + 26 = CX - 3.
-HR_X=$((CX - 19))
-HR_TEXT_X=$((CX - 3))
+HR_X=$(awk "BEGIN { print $CX - 19 }")
+HR_TEXT_X=$(awk "BEGIN { print $CX - 3 }")
 
 cat << EOM > "$MC_OUT"
 // Auto-generated layout constants for ${WIDTH}x${HEIGHT}
