@@ -14,6 +14,13 @@ SCREEN_RADIUS=$((CX - 1))
 # 1. TOP_Y: Geometric top limit for the arcs (45 degrees).
 TOP_Y=$(awk "BEGIN { print int($CY - ($ARC_RADIUS * 0.70710678) + 0.5) }")
 
+# 2. ICON_Y: Aligned with the center of the date string.
+# On Fenix 8 47mm (260x260): 
+# FONT_NUMBER_THAI_HOT height is ~96px. FONT_SMALL height is ~26px.
+# Date Y = (TOP_Y + TIME_H) - DATE_H = (42 + 96) - 26 = 112.
+# Date Center = 112 + (26/2) = 112 + 13 = 125.
+ICON_Y=125
+
 # Additional UI positions
 Y_HR=12
 Y_COND=203
@@ -27,11 +34,17 @@ BATT_TRACK_END=225
 SOLAR_TRACK_START=315
 SOLAR_TRACK_END=405 # 315 + 90 (handles wrap-around)
 
+# Icon dimensions (Static)
+BATT_W=10
+BATT_H=18
+BATT_FILL_MAX_H=16
+SUN_R=5
+
 # Icon positions
 BX=24
-BY=$CY
+BY=$ICON_Y
 SX=$((WIDTH - 24))
-SY=$CY
+SY=$ICON_Y
 
 # Pre-calculate Solar Rays (8 rays, each: x1, y1, x2, y2)
 SOLAR_RAYS_MC="["
@@ -88,7 +101,12 @@ module LayoutGenerated {
     const BY = $BY;
     const SX = $SX;
     const SY = $SY;
-    
+
+    const BATT_W = $BATT_W;
+    const BATT_H = $BATT_H;
+    const BATT_FILL_MAX_H = $BATT_FILL_MAX_H;
+    const SUN_R = $SUN_R;
+
     const HR_X = $HR_X;
     const HR_TEXT_X = $HR_TEXT_X;
     

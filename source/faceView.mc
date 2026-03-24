@@ -58,7 +58,6 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
     private var _lastBufferMinute as $.Toybox.Lang.Number = -1;
     private var _timeH as $.Toybox.Lang.Number = 0;
     private var _dateH as $.Toybox.Lang.Number = 0;
-    private var _iconY as $.Toybox.Lang.Number = 0;
 
     function initialize() {
         WatchFace.initialize();
@@ -69,7 +68,6 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
     function onLayout(dc as $.Toybox.Graphics.Dc) as Void {
         _timeH = dc.getFontHeight(FONT_TIME);
         _dateH = dc.getFontHeight(FONT_SMALL);
-        _iconY = TOP_Y + _timeH - (_dateH / 2);
         initializeStaticBuffer();
         var clockTime = $.Toybox.System.getClockTime();
         updateLongTermData(clockTime, dc);
@@ -159,17 +157,18 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
 
         // C. Static Icons
         bDc.setPenWidth(1);
-        var bx = $.LayoutGenerated.BX; var by = _iconY;
+        var bx = $.LayoutGenerated.BX; var by = $.LayoutGenerated.BY;
+        var bw = $.LayoutGenerated.BATT_W; var bh = $.LayoutGenerated.BATT_H;
         bDc.setColor($.Toybox.Graphics.COLOR_LT_GRAY, COLOR_BG);
-        bDc.drawRectangle(bx - 5, by - 9, 10, 18);
-        bDc.fillRectangle(bx - 2, by - 11, 4, 2); 
+        bDc.drawRectangle(bx - (bw/2), by - (bh/2), bw, bh);
+        bDc.fillRectangle(bx - 2, by - (bh/2) - 2, 4, 2); 
         bDc.setColor(faceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
-        var fillH = (16 * (_batteryLevel / 100.0)).toNumber();
-        if (fillH > 0) { bDc.fillRectangle(bx - 4, by + 8 - fillH, 8, fillH); }
+        var fillH = ($.LayoutGenerated.BATT_FILL_MAX_H * (_batteryLevel / 100.0)).toNumber();
+        if (fillH > 0) { bDc.fillRectangle(bx - (bw/2) + 1, by + (bh/2) - 1 - fillH, bw - 2, fillH); }
 
-        var sx = $.LayoutGenerated.SX; var sy = _iconY;
+        var sx = $.LayoutGenerated.SX; var sy = $.LayoutGenerated.SY;
         bDc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
-        bDc.fillCircle(sx, sy, 5);
+        bDc.fillCircle(sx, sy, $.LayoutGenerated.SUN_R);
         var rays = $.LayoutGenerated.SOLAR_RAYS;
         for (var i = 0; i < rays.size(); i++) {
             var r = rays[i];
@@ -209,17 +208,18 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         renderArcsDirectly(dc);
         // Icons
         dc.setPenWidth(1);
-        var bx = $.LayoutGenerated.BX; var by = _iconY;
+        var bx = $.LayoutGenerated.BX; var by = $.LayoutGenerated.BY;
+        var bw = $.LayoutGenerated.BATT_W; var bh = $.LayoutGenerated.BATT_H;
         dc.setColor($.Toybox.Graphics.COLOR_LT_GRAY, COLOR_BG);
-        dc.drawRectangle(bx - 5, by - 9, 10, 18);
-        dc.fillRectangle(bx - 2, by - 11, 4, 2); 
+        dc.drawRectangle(bx - (bw/2), by - (bh/2), bw, bh);
+        dc.fillRectangle(bx - 2, by - (bh/2) - 2, 4, 2); 
         dc.setColor(faceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
-        var fillH = (16 * (_batteryLevel / 100.0)).toNumber();
-        if (fillH > 0) { dc.fillRectangle(bx - 4, by + 8 - fillH, 8, fillH); }
+        var fillH = ($.LayoutGenerated.BATT_FILL_MAX_H * (_batteryLevel / 100.0)).toNumber();
+        if (fillH > 0) { dc.fillRectangle(bx - (bw/2) + 1, by + (bh/2) - 1 - fillH, bw - 2, fillH); }
 
-        var sx = $.LayoutGenerated.SX; var sy = _iconY;
+        var sx = $.LayoutGenerated.SX; var sy = $.LayoutGenerated.SY;
         dc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
-        dc.fillCircle(sx, sy, 5);
+        dc.fillCircle(sx, sy, $.LayoutGenerated.SUN_R);
         var rays = $.LayoutGenerated.SOLAR_RAYS;
         for (var i = 0; i < rays.size(); i++) {
             var r = rays[i];
@@ -298,7 +298,7 @@ class faceView extends $.Toybox.WatchUi.WatchFace {
         dc.drawRectangle(CX - tempW/2, Y_TEMP, tempW, 26);
         
         // Icon Guides
-        dc.drawCircle($.LayoutGenerated.BX, _iconY, 12); dc.drawCircle($.LayoutGenerated.SX, _iconY, 12);
+        dc.drawCircle($.LayoutGenerated.BX, $.LayoutGenerated.BY, 12); dc.drawCircle($.LayoutGenerated.SX, $.LayoutGenerated.SY, 12);
     }
 
     private function drawHeartIcon(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, color as Number) as Void {
