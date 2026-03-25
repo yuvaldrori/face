@@ -171,7 +171,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
         // 2. Data Fills
         dc.setColor(FaceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
-        var battFillAngle = (_batteryLevel / 100.0) * 90.0;
+        var battFillAngle = (_batteryLevel / 100.0) * $.LayoutGenerated.DATA_ARC_SPAN;
         if (battFillAngle > 0) {
             FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_CLOCKWISE, $.LayoutGenerated.BATT_START, ($.LayoutGenerated.BATT_START - battFillAngle).toNumber());
         }
@@ -179,7 +179,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         if (_solarIntensity > 0) {
             dc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
             var clampedIntensity = _solarIntensity > 100 ? 100.0 : _solarIntensity;
-            var solarFillAngle = (clampedIntensity / 100.0) * 90.0;
+            var solarFillAngle = (clampedIntensity / 100.0) * $.LayoutGenerated.DATA_ARC_SPAN;
             FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, ($.LayoutGenerated.SOLAR_TRACK_START + solarFillAngle).toNumber());
         }
     }
@@ -193,7 +193,10 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         var bw = $.LayoutGenerated.BATT_W; var bh = $.LayoutGenerated.BATT_H;
         dc.setColor($.Toybox.Graphics.COLOR_LT_GRAY, COLOR_BG);
         dc.drawRectangle(bx - (bw/2), by - (bh/2), bw, bh);
-        dc.fillRectangle(bx - 2, by - (bh/2) - 2, 4, 2); 
+        
+        var tw = $.LayoutGenerated.BATT_TIP_W; var th = $.LayoutGenerated.BATT_TIP_H;
+        dc.fillRectangle(bx - (tw/2), by - (bh/2) - th, tw, th); 
+        
         dc.setColor(FaceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
         var fillH = ($.LayoutGenerated.BATT_FILL_MAX_H * (_batteryLevel / 100.0)).toNumber();
         if (fillH > 0) { 
@@ -231,7 +234,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
         // Weather Group (Semi-Static)
         if (_isCondWrapped) {
-            dc.drawText(CX, Y_COND - 24, FONT_SMALL, _condLine1, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(CX, Y_COND - $.LayoutGenerated.COND_WRAP_V_OFFSET, FONT_SMALL, _condLine1, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(CX, Y_COND, FONT_SMALL, _condLine2, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
         } else {
             dc.drawText(CX, Y_COND, FONT_SMALL, _lastCondStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
@@ -285,7 +288,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         if (_isCondWrapped) {
             var w1 = dc.getTextWidthInPixels(_condLine1, FONT_SMALL);
             var w2 = dc.getTextWidthInPixels(_condLine2, FONT_SMALL);
-            dc.drawRectangle(CX - w1/2, Y_COND - 24, w1, 26);
+            dc.drawRectangle(CX - w1/2, Y_COND - $.LayoutGenerated.COND_WRAP_V_OFFSET, w1, 26);
             dc.drawRectangle(CX - w2/2, Y_COND, w2, 26);
         } else {
             dc.drawRectangle(CX - condW/2, Y_COND, condW, 26);
@@ -303,7 +306,9 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.setColor(color, COLOR_BG);
         var hx = $.LayoutGenerated.HR_X;
         var hy = $.LayoutGenerated.HR_ICON_Y;
-        dc.fillCircle(hx - 5, hy - 5, 5); dc.fillCircle(hx + 5, hy - 5, 5);
+        var r = $.LayoutGenerated.HEART_LOBE_R;
+        var off = $.LayoutGenerated.HEART_LOBE_OFFSET;
+        dc.fillCircle(hx - off, hy - off, r); dc.fillCircle(hx + off, hy - off, r);
         dc.fillPolygon($.LayoutGenerated.HEART_POLY);
     }
 

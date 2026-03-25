@@ -52,21 +52,25 @@ Y_TEMP=$(awk "BEGIN { print int($HEIGHT - $FONT_SMALL_H + 1) }")
 COND_V_SPACING=26
 Y_COND=$(awk "BEGIN { print int($Y_TEMP - $COND_V_SPACING) }")
 
+# Weather wrap offset (vertical spacing for second line)
+COND_WRAP_V_OFFSET=24
+
 # Arcs (Angles in Degrees, standard Connect IQ 0-360 range)
 ARC_PEN_WIDTH=6
 
-# Left Arc: Battery (Centered at 180° [West], spanning 90°)
-BATT_SPAN=90
+# Universal Arc Span (Degrees)
+DATA_ARC_SPAN=90
+
+# Left Arc: Battery (Centered at 180° [West])
 BATT_CENTER=180
-BATT_TRACK_START=$(awk "BEGIN { print int($BATT_CENTER - ($BATT_SPAN / 2)) }")
-BATT_TRACK_END=$(awk "BEGIN { print int($BATT_CENTER + ($BATT_SPAN / 2)) }")
+BATT_TRACK_START=$(awk "BEGIN { print int($BATT_CENTER - ($DATA_ARC_SPAN / 2)) }")
+BATT_TRACK_END=$(awk "BEGIN { print int($BATT_CENTER + ($DATA_ARC_SPAN / 2)) }")
 BATT_START=$BATT_TRACK_END
 
-# Right Arc: Solar (Centered at 0° [East], spanning 90°)
-SOLAR_SPAN=90
+# Right Arc: Solar (Centered at 0° [East])
 SOLAR_CENTER=0
-SOLAR_TRACK_START=$(awk "BEGIN { start = $SOLAR_CENTER - ($SOLAR_SPAN / 2); if (start < 0) { start += 360 }; print int(start) }")
-SOLAR_TRACK_END=$(awk "BEGIN { print int($SOLAR_CENTER + ($SOLAR_SPAN / 2) + 360) }") # Handle wrap for logic (405)
+SOLAR_TRACK_START=$(awk "BEGIN { start = $SOLAR_CENTER - ($DATA_ARC_SPAN / 2); if (start < 0) { start += 360 }; print int(start) }")
+SOLAR_TRACK_END=$(awk "BEGIN { print int($SOLAR_CENTER + ($DATA_ARC_SPAN / 2) + 360) }") # Handle wrap for logic (405)
 
 # Icon Dimensions (Optimized for readability on MIP)
 BATT_W=10
@@ -74,6 +78,10 @@ BATT_H=18
 BATT_FILL_MAX_H=16
 BATT_FILL_PADDING_X=1
 BATT_FILL_PADDING_Y=1
+# Battery Tip Dimensions
+BATT_TIP_W=4
+BATT_TIP_H=2
+
 SUN_R=5
 
 # Icon Horizontal Positions (Calculated for symmetrical spacing from edges)
@@ -112,6 +120,10 @@ HR_TEXT_X=$(awk "BEGIN { print int($HR_START_X + $HR_ICON_W + $HR_GAP) }")
 HR_ICON_V_OFFSET=14
 HR_ICON_Y=$(awk "BEGIN { print int($Y_HR + $HR_ICON_V_OFFSET) }")
 
+# Heart Lobe Geometry
+HEART_LOBE_R=5
+HEART_LOBE_OFFSET=5
+
 # Pre-calculate Heart Polygon (relative to HR_X, HR_ICON_Y)
 # Base Poly: [[-10, -2], [10, -2], [0, 10]]
 HEART_POLY_MC="[[$(awk "BEGIN { print int($HR_X - 10) }"), $(awk "BEGIN { print int($HR_ICON_Y - 2) }")], [$(awk "BEGIN { print int($HR_X + 10) }"), $(awk "BEGIN { print int($HR_ICON_Y - 2) }")], [$(awk "BEGIN { print int($HR_X) }"), $(awk "BEGIN { print int($HR_ICON_Y + 10) }")]]"
@@ -132,6 +144,7 @@ module LayoutGenerated {
     const Y_HR = $Y_HR;
     const Y_COND = $Y_COND;
     const Y_TEMP = $Y_TEMP;
+    const COND_WRAP_V_OFFSET = $COND_WRAP_V_OFFSET;
 
     const ARC_PEN_WIDTH = $ARC_PEN_WIDTH;
     const BATT_START = $BATT_START;
@@ -139,6 +152,7 @@ module LayoutGenerated {
     const BATT_TRACK_END = $BATT_TRACK_END;
     const SOLAR_TRACK_START = $SOLAR_TRACK_START;
     const SOLAR_TRACK_END = $SOLAR_TRACK_END;
+    const DATA_ARC_SPAN = $DATA_ARC_SPAN;
 
     const BX = $BX;
     const BY = $ICON_Y;
@@ -150,11 +164,16 @@ module LayoutGenerated {
     const BATT_FILL_MAX_H = $BATT_FILL_MAX_H;
     const BATT_FILL_PADDING_X = $BATT_FILL_PADDING_X;
     const BATT_FILL_PADDING_Y = $BATT_FILL_PADDING_Y;
+    const BATT_TIP_W = $BATT_TIP_W;
+    const BATT_TIP_H = $BATT_TIP_H;
+    
     const SUN_R = $SUN_R;
 
     const HR_X = $HR_X;
     const HR_ICON_Y = $HR_ICON_Y;
     const HR_TEXT_X = $HR_TEXT_X;
+    const HEART_LOBE_R = $HEART_LOBE_R;
+    const HEART_LOBE_OFFSET = $HEART_LOBE_OFFSET;
     
     const MAX_TEXT_WIDTH = 180;
     
