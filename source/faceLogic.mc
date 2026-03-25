@@ -74,9 +74,8 @@ module FaceLogic {
     // Strictly wrap an angle into the 0-360 range for hardware driver stability
     //
     function wrapAngle(angle as $.Toybox.Lang.Number) as $.Toybox.Lang.Number {
-        var a = angle;
-        while (a < 0) { a += 360; }
-        while (a >= 360) { a -= 360; }
+        var a = angle % 360;
+        if (a < 0) { a += 360; }
         return a;
     }
 

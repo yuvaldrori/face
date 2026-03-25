@@ -149,32 +149,38 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         if (!(buffer instanceof $.Toybox.Graphics.BufferedBitmap)) { return; }
 
         var bDc = buffer.getDc();
-
         bDc.setColor(COLOR_BG, COLOR_BG);
         bDc.clear();
 
-        // A. Static Arcs (Tracks)
-        bDc.setPenWidth(ARC_PEN_WIDTH);
-        bDc.setColor($.Toybox.Graphics.COLOR_DK_GRAY, COLOR_BG);
-        FaceLogic.drawSafeArc(bDc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.BATT_TRACK_START, $.LayoutGenerated.BATT_TRACK_END);
-        FaceLogic.drawSafeArc(bDc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, $.LayoutGenerated.SOLAR_TRACK_END);
+        renderAllArcs(bDc);
+        drawStaticIcons(bDc);
+    }
 
-        // B. Data Arcs (Fill - Static for this minute)
-        bDc.setColor(FaceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
+    //
+    // Shared logic for arc tracks and data fills
+    //
+    private function renderAllArcs(dc as $.Toybox.Graphics.Dc) as Void {
+        if (_hasAntiAlias) { dc.setAntiAlias(false); }
+        dc.setPenWidth(ARC_PEN_WIDTH);
+
+        // 1. Static Tracks
+        dc.setColor($.Toybox.Graphics.COLOR_DK_GRAY, COLOR_BG);
+        FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.BATT_TRACK_START, $.LayoutGenerated.BATT_TRACK_END);
+        FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, $.LayoutGenerated.SOLAR_TRACK_END);
+
+        // 2. Data Fills
+        dc.setColor(FaceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
         var battFillAngle = (_batteryLevel / 100.0) * 90.0;
         if (battFillAngle > 0) {
-            FaceLogic.drawSafeArc(bDc, CX, CX, ARC_RADIUS, Graphics.ARC_CLOCKWISE, $.LayoutGenerated.BATT_START, ($.LayoutGenerated.BATT_START - battFillAngle).toNumber());
+            FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_CLOCKWISE, $.LayoutGenerated.BATT_START, ($.LayoutGenerated.BATT_START - battFillAngle).toNumber());
         }
 
         if (_solarIntensity > 0) {
-            bDc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
+            dc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
             var clampedIntensity = _solarIntensity > 100 ? 100.0 : _solarIntensity;
             var solarFillAngle = (clampedIntensity / 100.0) * 90.0;
-            FaceLogic.drawSafeArc(bDc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, ($.LayoutGenerated.SOLAR_TRACK_START + solarFillAngle).toNumber());
+            FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, ($.LayoutGenerated.SOLAR_TRACK_START + solarFillAngle).toNumber());
         }
-
-        // C. Static Icons
-        drawStaticIcons(bDc);
     }
 
     //
@@ -234,39 +240,10 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Safety fallback if the background buffer is purged or unavailable
     //
     private function renderFullFallback(dc as $.Toybox.Graphics.Dc) as Void {
-        renderArcsDirectly(dc);
-        drawStaticIcons(dc);
-    }
-
-    //
-    // Direct arc rendering for the fallback path
-    //
-    private function renderArcsDirectly(dc as $.Toybox.Graphics.Dc) as Void {
-        if (_hasAntiAlias) { dc.setAntiAlias(false); }
         dc.setColor(COLOR_BG, COLOR_BG);
         dc.clear();
-        dc.setPenWidth(ARC_PEN_WIDTH);
-        
-        // Battery Arc
-        dc.setColor($.Toybox.Graphics.COLOR_DK_GRAY, COLOR_BG);
-        FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.BATT_TRACK_START, $.LayoutGenerated.BATT_TRACK_END);
-        
-        dc.setColor(FaceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
-        var battFillAngle = (_batteryLevel / 100.0) * 90.0;
-        if (battFillAngle > 0) {
-            FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_CLOCKWISE, $.LayoutGenerated.BATT_START, ($.LayoutGenerated.BATT_START - battFillAngle).toNumber());
-        }
-
-        // Solar Arc
-        dc.setColor($.Toybox.Graphics.COLOR_DK_GRAY, COLOR_BG);
-        FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, $.LayoutGenerated.SOLAR_TRACK_END);
-        
-        if (_solarIntensity > 0) {
-            dc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
-            var clampedIntensity = _solarIntensity > 100 ? 100.0 : _solarIntensity;
-            var solarFillAngle = (clampedIntensity / 100.0) * 90.0;
-            FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, ($.LayoutGenerated.SOLAR_TRACK_START + solarFillAngle).toNumber());
-        }
+        renderAllArcs(dc);
+        drawStaticIcons(dc);
     }
 
     //
@@ -350,12 +327,12 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         var stats = $.Toybox.System.getSystemStats();
         _batteryLevel = stats.battery;
         if (_batteryLevel != _lastBattLevel) { _lastBattLevel = _batteryLevel; }
-        if (stats has :solarIntensity) {
-            var intensity = stats.solarIntensity;
-            if (intensity != _lastSolarValue) {
-                _lastSolarValue = (intensity != null) ? intensity as $.Toybox.Lang.Number : 0;
-                _solarIntensity = _lastSolarValue;
-            }
+        
+        var intensity = (stats has :solarIntensity) ? stats.solarIntensity : 0;
+        if (intensity == null) { intensity = 0; }
+        if (intensity != _lastSolarValue) {
+            _lastSolarValue = intensity;
+            _solarIntensity = intensity;
         }
         _lastTimeStr = FaceLogic.getTimeString(clockTime.hour as $.Toybox.Lang.Number, clockTime.min as $.Toybox.Lang.Number);
         var info = $.Toybox.Time.Gregorian.info($.Toybox.Time.now(), $.Toybox.Time.FORMAT_SHORT);
