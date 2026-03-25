@@ -18,7 +18,7 @@ The display palette is limited. To prevent UI elements (like the Clock) from "bi
 - **Transparency:** All text and icons MUST use `$.Toybox.Graphics.COLOR_TRANSPARENT` as the background color. 
 - **Anti-Aliasing for Text:** Anti-aliasing should be enabled **only** during font rendering to ensure smooth text, then immediately disabled for the next frame's shapes.
 
-## 2. Rendering Strategy & optimization
+## 2. Rendering Strategy & Optimization
 
 ### The "Fenix 8 Solar Quirk": Partial vs. Full Updates
 Research and empirical testing confirmed that `onPartialUpdate` is ineffective on Fenix 8 Solar (System 7/8).
@@ -45,20 +45,35 @@ The project uses a comprehensive `Makefile` to orchestrate the complex build and
 - **`make profile`**: Enables the `-k` compiler flag for performance profiling, critical for ensuring the 30ms power budget is maintained.
 - **`make generate`**: Manually triggers the layout and weather string generation scripts.
 
+### UI Generation & Static Layout
+To maintain peak performance, all UI layout constants MUST be managed via `scripts/generate_layout.sh`.
+- **Software Math Only:** The script must perform all geometric and trigonometric calculations using tools (e.g., `awk`). 
+- **No Magic Comments:** Never use manual calculations in comments to derive numbers. Every value must be programmatically derived from core display metrics or documented font heights.
+
 ### Simulator Management
 The Makefile includes robust logic to manage the Garmin Simulator:
 - Automatically starts the simulator if it's not running.
 - Uses `ss` to wait for port `1234` to be ready before attempting to deploy a PRG.
 - Provides `check-sim` and `wait-sim` helpers for CI/CD environments.
 
-## 4. Debug & Alignment
+## 4. Coding Standards
+
+All contributions must strictly adhere to the [official Garmin Monkey C Coding Conventions](https://developer.garmin.com/connect-iq/monkey-c/coding-conventions/).
+
+### Key Requirements:
+- **Naming:** `CamelCase` for Classes/Modules, `camelCase` for functions and public members, and `_underscoreCamelCase` for private member variables.
+- **Architecture:** Always call the superclass `initialize()` method on the first line of any `initialize` function.
+- **Formatting:** Use 4-space indentation and same-line opening braces.
+- **Structure:** Maintain a strict "one class per file" policy.
+
+## 5. Debug & Alignment
 
 The project maintains a professional-grade **Alignment Overlay** to verify geometric precision.
 - **Toggle:** Controlled via the `debug_on` / `debug_off` annotations in `monkey.jungle` and `debug.jungle`.
 - **Visibility:** Uses high-contrast `COLOR_RED` for crosshairs and `COLOR_GREEN` for bounding boxes. 
 - **Sync:** The debug bounding boxes must always be updated to match the active vertical offsets (e.g., `yTimeUp`) used in the main rendering loop.
 
-## 5. Quality Assurance
+## 6. Quality Assurance
 
 - **Unit Tests:** `source/faceTests.mc` contains geometric validation and string logic tests. 
     - **`testWeatherWrappingExhaustive`**: Programmatically injects every SDK weather condition ID to verify that multi-line wrapping (`_isCondWrapped`) works correctly for all possible strings.
