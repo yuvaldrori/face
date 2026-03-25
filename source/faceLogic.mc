@@ -89,7 +89,10 @@ module FaceLogic {
         } else {
             totalAngle = start - end;
         }
-        while (totalAngle < 0) { totalAngle += 360; }
+        
+        totalAngle %= 360;
+        if (totalAngle < 0) { totalAngle += 360; }
+        if (totalAngle == 0 && start != end) { totalAngle = 360; } // Handle full circle case
         if (totalAngle <= 0) { return; }
 
         if (totalAngle <= 20) {
