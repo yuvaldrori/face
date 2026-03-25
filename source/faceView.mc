@@ -279,24 +279,28 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.drawRectangle(CX - dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME)/2, yTimeUp, dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME), _timeH);
         dc.drawRectangle(CX - dc.getTextWidthInPixels(_lastDateStr, FONT_SMALL)/2, (yTimeUp + _timeH) - _dateH, dc.getTextWidthInPixels(_lastDateStr, FONT_SMALL), _dateH);
 
+        // Heart Rate
         var hrTextW = dc.getTextWidthInPixels(_lastHrStr, FONT_SMALL);
-        var totalHrW = 20 + 6 + hrTextW;
-        var hrStartX = $.LayoutGenerated.HR_X - 10;
-        dc.drawRectangle(hrStartX, Y_HR, totalHrW, 26);
+        var iconW = $.LayoutGenerated.HR_ICON_W;
+        var gap = $.LayoutGenerated.HR_GAP;
+        var totalHrW = iconW + gap + hrTextW;
+        var hrStartX = $.LayoutGenerated.HR_X - (iconW / 2);
+        dc.drawRectangle(hrStartX, Y_HR, totalHrW, _dateH);
 
         var condW = dc.getTextWidthInPixels(_lastCondStr, FONT_SMALL);
         if (_isCondWrapped) {
             var w1 = dc.getTextWidthInPixels(_condLine1, FONT_SMALL);
             var w2 = dc.getTextWidthInPixels(_condLine2, FONT_SMALL);
-            dc.drawRectangle(CX - w1/2, Y_COND - $.LayoutGenerated.COND_WRAP_V_OFFSET, w1, 26);
-            dc.drawRectangle(CX - w2/2, Y_COND, w2, 26);
+            dc.drawRectangle(CX - w1/2, Y_COND - $.LayoutGenerated.COND_WRAP_V_OFFSET, w1, _dateH);
+            dc.drawRectangle(CX - w2/2, Y_COND, w2, _dateH);
         } else {
-            dc.drawRectangle(CX - condW/2, Y_COND, condW, 26);
+            dc.drawRectangle(CX - condW/2, Y_COND, condW, _dateH);
         }
         var tempW = dc.getTextWidthInPixels(_lastTempStr, FONT_SMALL);
-        dc.drawRectangle(CX - tempW/2, Y_TEMP, tempW, 26);
+        dc.drawRectangle(CX - tempW/2, Y_TEMP, tempW, _dateH);
         
-        dc.drawCircle($.LayoutGenerated.BX, $.LayoutGenerated.BY, 12); dc.drawCircle($.LayoutGenerated.SX, $.LayoutGenerated.SY, 12);
+        var gr = $.LayoutGenerated.DEBUG_GUIDE_R;
+        dc.drawCircle($.LayoutGenerated.BX, $.LayoutGenerated.BY, gr); dc.drawCircle($.LayoutGenerated.SX, $.LayoutGenerated.SY, gr);
     }
 
     //

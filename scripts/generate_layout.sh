@@ -123,10 +123,21 @@ HR_ICON_Y=$(awk "BEGIN { print int($Y_HR + $HR_ICON_V_OFFSET) }")
 # Heart Lobe Geometry
 HEART_LOBE_R=5
 HEART_LOBE_OFFSET=5
+HEART_POLY_V_OFFSET=2
+HEART_POLY_H_OFFSET=10
+HEART_POLY_TIP_V=10
 
-# Pre-calculate Heart Polygon (relative to HR_X, HR_ICON_Y)
-# Base Poly: [[-10, -2], [10, -2], [0, 10]]
-HEART_POLY_MC="[[$(awk "BEGIN { print int($HR_X - 10) }"), $(awk "BEGIN { print int($HR_ICON_Y - 2) }")], [$(awk "BEGIN { print int($HR_X + 10) }"), $(awk "BEGIN { print int($HR_ICON_Y - 2) }")], [$(awk "BEGIN { print int($HR_X) }"), $(awk "BEGIN { print int($HR_ICON_Y + 10) }")]]"
+# Pre-calculate Heart Polygon
+P1_X=$(awk "BEGIN { print int($HR_X - $HEART_POLY_H_OFFSET) }")
+P1_Y=$(awk "BEGIN { print int($HR_ICON_Y - $HEART_POLY_V_OFFSET) }")
+P2_X=$(awk "BEGIN { print int($HR_X + $HEART_POLY_H_OFFSET) }")
+P2_Y=$(awk "BEGIN { print int($HR_ICON_Y - $HEART_POLY_V_OFFSET) }")
+P3_X=$(awk "BEGIN { print int($HR_X) }")
+P3_Y=$(awk "BEGIN { print int($HR_ICON_Y + $HEART_POLY_TIP_V) }")
+HEART_POLY_MC="[[$P1_X, $P1_Y], [$P2_X, $P2_Y], [$P3_X, $P3_Y]]"
+
+# Debug Constants
+DEBUG_GUIDE_R=12
 
 cat << EOM > "$MC_OUT"
 // Auto-generated layout constants for ${WIDTH}x${HEIGHT}
@@ -170,12 +181,15 @@ module LayoutGenerated {
     const SUN_R = $SUN_R;
 
     const HR_X = $HR_X;
+    const HR_ICON_W = $HR_ICON_W;
+    const HR_GAP = $HR_GAP;
     const HR_ICON_Y = $HR_ICON_Y;
     const HR_TEXT_X = $HR_TEXT_X;
     const HEART_LOBE_R = $HEART_LOBE_R;
     const HEART_LOBE_OFFSET = $HEART_LOBE_OFFSET;
     
     const MAX_TEXT_WIDTH = 180;
+    const DEBUG_GUIDE_R = $DEBUG_GUIDE_R;
     
     // Geometric constants
     const HEART_POLY = $HEART_POLY_MC;
