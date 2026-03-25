@@ -17,6 +17,7 @@ Directly calling `dc.drawArc()` with large spans or crossing the 0/360-degree bo
 The display palette is limited. To prevent UI elements (like the Clock) from "biting" into or overwriting the side arcs:
 - **Transparency:** All text and icons MUST use `$.Toybox.Graphics.COLOR_TRANSPARENT` as the background color. 
 - **Anti-Aliasing for Text:** Anti-aliasing should be enabled **only** during font rendering to ensure smooth text, then immediately disabled for the next frame's shapes.
+- **Palette Integrity:** When using a paletted `BufferedBitmap`, all colors returned by rendering logic (e.g., `FaceLogic.getBatteryColor()`) MUST be present in the palette. Missing colors will be mapped by the hardware driver to the "nearest" match, which can cause elements to appear gray or invisible.
 
 ## 2. Rendering Strategy & Optimization
 
@@ -75,8 +76,9 @@ The project maintains a professional-grade **Alignment Overlay** to verify geome
 
 ## 6. Quality Assurance
 
-- **Unit Tests:** `source/faceTests.mc` contains geometric validation and string logic tests. 
+- **Unit Tests:** `source/faceTests.mc` contains geometric validation, string logic, and palette integrity tests. 
     - **`testWeatherWrappingExhaustive`**: Programmatically injects every SDK weather condition ID to verify that multi-line wrapping (`_isCondWrapped`) works correctly for all possible strings.
+    - **`testPaletteCompleteness`**: Ensures all colors used in the rendering logic are explicitly defined in the static buffer's 4-bit palette.
 - **Memory Profiling:**
     - **`make heap-check`**: Runs the debug PRG in the simulator with the `-log` flag. This allows monitoring of peak memory usage. Aim to keep the watch face under **96KB** for maximum compatibility.
 - **Visual Alignment:**
