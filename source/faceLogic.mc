@@ -114,19 +114,26 @@ module FaceLogic {
     //
     function splitString(str as $.Toybox.Lang.String, dc as $.Toybox.Graphics.Dc, font as $.Toybox.Graphics.FontDefinition, maxWidth as $.Toybox.Lang.Number) as [$.Toybox.Lang.String, $.Toybox.Lang.String] {
         var words = [] as Array<String>;
-        var remaining = str;
-        var spaceIdx = remaining.find(" ");
-        
-        while (spaceIdx != null) {
-            words.add(remaining.substring(0, spaceIdx) as String);
-            remaining = remaining.substring(spaceIdx + 1, remaining.length()) as String;
-            spaceIdx = remaining.find(" ");
+        var currentWord = "";
+        for (var i = 0; i < str.length(); i++) {
+            var char = str.substring(i, i+1);
+            if (char != null && char.equals(" ")) {
+                if (currentWord.length() > 0) {
+                    words.add(currentWord);
+                    currentWord = "";
+                }
+            } else if (char != null) {
+                currentWord += char;
+            }
         }
-        words.add(remaining);
+        if (currentWord.length() > 0) {
+            words.add(currentWord);
+        }
 
         var line1 = "";
         var line2 = "";
         var line1Full = false;
+        if (words.size() == 0) { return ["", ""]; }
 
         for (var i = 0; i < words.size(); i++) {
             if (!line1Full) {
@@ -134,8 +141,14 @@ module FaceLogic {
                 if (dc.getTextWidthInPixels(testLine, font) <= maxWidth) {
                     line1 = testLine;
                 } else {
-                    line1Full = true;
-                    line2 = words[i];
+                    if (line1.length() == 0) {
+                        // First word is already too long, put it on line 1 anyway
+                        line1 = words[i];
+                        line1Full = true;
+                    } else {
+                        line1Full = true;
+                        line2 = words[i];
+                    }
                 }
             } else {
                 line2 = (line2.length() == 0) ? words[i] : line2 + " " + words[i];

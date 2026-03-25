@@ -203,6 +203,52 @@ function testWeatherWrappingExhaustive(logger as $.Toybox.Test.Logger) as $.Toyb
 }
 
 (:test)
+function testSplitStringEdgeCases(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    var mockDc = new MockDc();
+    var maxWidth = 50; // Small width to force wrapping
+    
+    // Case 1: Empty string
+    var res = FaceLogic.splitString("", mockDc as $.Toybox.Graphics.Dc, $.Toybox.Graphics.FONT_SMALL, maxWidth);
+    $.Toybox.Test.assertEqual(res[0], "");
+    $.Toybox.Test.assertEqual(res[1], "");
+    
+    // Case 2: Single word too long for the line
+    var res2 = FaceLogic.splitString("Supercalifragilisticexpialidocious", mockDc as $.Toybox.Graphics.Dc, $.Toybox.Graphics.FONT_SMALL, maxWidth);
+    // Should put it on line 1 even if it exceeds width (as it can't be split)
+    $.Toybox.Test.assertEqual(res2[0], "Supercalifragilisticexpialidocious");
+    $.Toybox.Test.assertEqual(res2[1], "");
+    
+    // Case 3: Multiple spaces (Logic now collapses them into words)
+    var res3 = FaceLogic.splitString("Partly  cloudy", mockDc as $.Toybox.Graphics.Dc, $.Toybox.Graphics.FONT_SMALL, maxWidth);
+    $.Toybox.Test.assertEqual(res3[0], "Partly");
+    $.Toybox.Test.assertEqual(res3[1], "cloudy"); 
+    
+    return true;
+}
+
+(:test)
+function testWrapAngleExtreme(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(720), 0);
+    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(-720), 0);
+    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(-1), 359);
+    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(361), 1);
+    return true;
+}
+
+(:test)
+function testDrawSafeArcFullCircle(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    var mockDc = new MockDc();
+    
+    // Test that start=0, end=0 with CW/CCW handles correctly
+    // Our logic says if start != end and totalAngle == 0, it's a full circle (360)
+    mockDc.drawArcCalls = 0;
+    FaceLogic.drawSafeArc(mockDc as $.Toybox.Graphics.Dc, 130, 130, 125, $.Toybox.Graphics.ARC_COUNTER_CLOCKWISE, 0, 360);
+    $.Toybox.Test.assertEqual(mockDc.drawArcCalls, 19); // (360/20) + 1
+    
+    return true;
+}
+
+(:test)
 function testLayoutConstants(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     // Verify Fenix 8 47mm (260x260) specific geometry
     $.Toybox.Test.assertEqual($.LayoutGenerated.CX, 130);
