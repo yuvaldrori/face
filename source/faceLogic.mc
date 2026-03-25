@@ -112,17 +112,15 @@ module FaceLogic {
     //
     function splitString(str as $.Toybox.Lang.String, dc as $.Toybox.Graphics.Dc, font as $.Toybox.Graphics.FontDefinition, maxWidth as $.Toybox.Lang.Number) as [$.Toybox.Lang.String, $.Toybox.Lang.String] {
         var words = [] as Array<String>;
-        var currentWord = "";
-        for (var i = 0; i < str.length(); i++) {
-            var char = str.substring(i, i+1);
-            if (char != null && char.equals(" ")) {
-                words.add(currentWord);
-                currentWord = "";
-            } else if (char != null) {
-                currentWord += char;
-            }
+        var remaining = str;
+        var spaceIdx = remaining.find(" ");
+        
+        while (spaceIdx != null) {
+            words.add(remaining.substring(0, spaceIdx) as String);
+            remaining = remaining.substring(spaceIdx + 1, remaining.length()) as String;
+            spaceIdx = remaining.find(" ");
         }
-        words.add(currentWord);
+        words.add(remaining);
 
         var line1 = "";
         var line2 = "";

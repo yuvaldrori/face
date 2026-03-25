@@ -9,8 +9,8 @@ HEIGHT=${2:-260}
 MC_OUT="source/layoutGenerated.mc"
 
 # Core Centers
-CX=$(awk "BEGIN { print $WIDTH / 2 }")
-CY=$(awk "BEGIN { print $HEIGHT / 2 }")
+CX=$(awk "BEGIN { print int($WIDTH / 2) }")
+CY=$(awk "BEGIN { print int($HEIGHT / 2) }")
 
 # Math Constants
 PI=$(awk "BEGIN { print atan2(0, -1) }")
@@ -19,8 +19,8 @@ DEG_TO_RAD=$(awk "BEGIN { print $PI / 180 }")
 # Display Metrics
 # Arcs are positioned 5px from the edge to avoid display clipping on some bezel variants
 ARC_MARGIN=5
-ARC_RADIUS=$(awk "BEGIN { print $CX - $ARC_MARGIN }")
-SCREEN_RADIUS=$(awk "BEGIN { print $CX - 1 }")
+ARC_RADIUS=$(awk "BEGIN { print int($CX - $ARC_MARGIN) }")
+SCREEN_RADIUS=$(awk "BEGIN { print int($CX - 1) }")
 
 # Font Specifications (Pixel Heights for Fenix 8 47mm Solar)
 # Source: https://developer.garmin.com/connect-iq/device-reference/fenix8solar47mm/
@@ -36,21 +36,21 @@ TOP_Y=$(awk "BEGIN { print int($CY - ($ARC_RADIUS * $SIN_45) + 0.5) }")
 
 # 2. ICON_Y: Centered vertically with the Date string for balanced glyph/text alignment.
 # Date Y position logic: Top field (Time) + Time height - overlap padding for Date.
-DATE_Y=$(awk "BEGIN { print $TOP_Y + $FONT_TIME_H - $FONT_SMALL_H }")
+DATE_Y=$(awk "BEGIN { print int($TOP_Y + $FONT_TIME_H - $FONT_SMALL_H) }")
 ICON_Y=$(awk "BEGIN { print int($DATE_Y + ($FONT_SMALL_H / 2) + 0.5) }")
 
 # 3. Dynamic Field Y-Positions (Calculated relative to core metrics)
 # Y_HR: Positioned above the clock, within the top arc span.
 HR_V_OFFSET=30
-Y_HR=$(awk "BEGIN { print $TOP_Y - $HR_V_OFFSET }") 
+Y_HR=$(awk "BEGIN { print int($TOP_Y - $HR_V_OFFSET) }") 
 
 # Y_TEMP: Positioned at the very bottom, just inside the screen boundary.
 # Subtract height and add 1px buffer to ensure it doesn't clip the bottom edge.
-Y_TEMP=$(awk "BEGIN { print $HEIGHT - $FONT_SMALL_H + 1 }")
+Y_TEMP=$(awk "BEGIN { print int($HEIGHT - $FONT_SMALL_H + 1) }")
 
 # Y_COND: Positioned above the temperature with standard vertical spacing (26px offset).
 COND_V_SPACING=26
-Y_COND=$(awk "BEGIN { print $Y_TEMP - $COND_V_SPACING }")
+Y_COND=$(awk "BEGIN { print int($Y_TEMP - $COND_V_SPACING) }")
 
 # Arcs (Angles in Degrees, standard Connect IQ 0-360 range)
 ARC_PEN_WIDTH=6
@@ -58,15 +58,15 @@ ARC_PEN_WIDTH=6
 # Left Arc: Battery (Centered at 180° [West], spanning 90°)
 BATT_SPAN=90
 BATT_CENTER=180
-BATT_TRACK_START=$(awk "BEGIN { print $BATT_CENTER - ($BATT_SPAN / 2) }")
-BATT_TRACK_END=$(awk "BEGIN { print $BATT_CENTER + ($BATT_SPAN / 2) }")
+BATT_TRACK_START=$(awk "BEGIN { print int($BATT_CENTER - ($BATT_SPAN / 2)) }")
+BATT_TRACK_END=$(awk "BEGIN { print int($BATT_CENTER + ($BATT_SPAN / 2)) }")
 BATT_START=$BATT_TRACK_END
 
 # Right Arc: Solar (Centered at 0° [East], spanning 90°)
 SOLAR_SPAN=90
 SOLAR_CENTER=0
-SOLAR_TRACK_START=$(awk "BEGIN { start = $SOLAR_CENTER - ($SOLAR_SPAN / 2); if (start < 0) { start += 360 }; print start }")
-SOLAR_TRACK_END=$(awk "BEGIN { print $SOLAR_CENTER + ($SOLAR_SPAN / 2) + 360 }") # Handle wrap for logic (405)
+SOLAR_TRACK_START=$(awk "BEGIN { start = $SOLAR_CENTER - ($SOLAR_SPAN / 2); if (start < 0) { start += 360 }; print int(start) }")
+SOLAR_TRACK_END=$(awk "BEGIN { print int($SOLAR_CENTER + ($SOLAR_SPAN / 2) + 360) }") # Handle wrap for logic (405)
 
 # Icon Dimensions (Optimized for readability on MIP)
 BATT_W=10
@@ -77,7 +77,7 @@ SUN_R=5
 # Icon Horizontal Positions (Calculated for symmetrical spacing from edges)
 ICON_MARGIN=24
 BX=$ICON_MARGIN
-SX=$(awk "BEGIN { print $WIDTH - $ICON_MARGIN }")
+SX=$(awk "BEGIN { print int($WIDTH - $ICON_MARGIN) }")
 
 # Pre-calculate Solar Rays (8 rays, each: x1, y1, x2, y2)
 # Generates a static array to eliminate runtime trigonometric overhead.
@@ -100,11 +100,11 @@ SOLAR_RAYS_MC="${SOLAR_RAYS_MC%,}]"
 HR_ICON_W=20
 HR_GAP=6
 HR_TEXT_EST_W=32
-HR_TOTAL_W=$(awk "BEGIN { print $HR_ICON_W + $HR_GAP + $HR_TEXT_EST_W }")
-HR_START_X=$(awk "BEGIN { print $CX - ($HR_TOTAL_W / 2) }")
+HR_TOTAL_W=$(awk "BEGIN { print int($HR_ICON_W + $HR_GAP + $HR_TEXT_EST_W) }")
+HR_START_X=$(awk "BEGIN { print int($CX - ($HR_TOTAL_W / 2)) }")
 
-HR_X=$(awk "BEGIN { print $HR_START_X + ($HR_ICON_W / 2) }")
-HR_TEXT_X=$(awk "BEGIN { print $HR_START_X + $HR_ICON_W + $HR_GAP }")
+HR_X=$(awk "BEGIN { print int($HR_START_X + ($HR_ICON_W / 2)) }")
+HR_TEXT_X=$(awk "BEGIN { print int($HR_START_X + $HR_ICON_W + $HR_GAP) }")
 
 cat << EOM > "$MC_OUT"
 // Auto-generated layout constants for ${WIDTH}x${HEIGHT}

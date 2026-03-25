@@ -85,6 +85,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Initialize the off-screen buffer for static elements
     //
     private function initializeStaticBuffer() as Void {
+        if (_staticBuffer != null) { return; }
         if ($.Toybox.Graphics has :createBufferedBitmap) {
             // 4-bit palette (16 colors) for maximum efficiency on MIP
             _staticBuffer = $.Toybox.Graphics.createBufferedBitmap({
@@ -233,8 +234,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Safety fallback if the background buffer is purged or unavailable
     //
     private function renderFullFallback(dc as $.Toybox.Graphics.Dc) as Void {
-        dc.setColor(COLOR_BG, COLOR_BG);
-        dc.clear();
         renderArcsDirectly(dc);
         drawStaticIcons(dc);
     }
