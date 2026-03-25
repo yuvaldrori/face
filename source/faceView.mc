@@ -49,8 +49,11 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private const FONT_TIME = $.Toybox.Graphics.FONT_NUMBER_THAI_HOT;
     private const COLOR_MAIN = $.Toybox.Graphics.COLOR_WHITE;
     private const COLOR_BG = $.Toybox.Graphics.COLOR_BLACK;
+    private const COLOR_HEART = $.Toybox.Graphics.COLOR_RED;
+    private const COLOR_GLYPH = $.Toybox.Graphics.COLOR_LT_GRAY;
 
-    private const Y_HR = $.LayoutGenerated.Y_HR;    
+    private const Y_HR = $.LayoutGenerated.Y_HR;
+    
     private const Y_COND = $.LayoutGenerated.Y_COND; 
     private const Y_TEMP = $.LayoutGenerated.Y_TEMP; 
 
@@ -191,7 +194,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.setPenWidth(1);
         var bx = $.LayoutGenerated.BX; var by = $.LayoutGenerated.BY;
         var bw = $.LayoutGenerated.BATT_W; var bh = $.LayoutGenerated.BATT_H;
-        dc.setColor($.Toybox.Graphics.COLOR_LT_GRAY, COLOR_BG);
+        dc.setColor(COLOR_GLYPH, COLOR_BG);
         dc.drawRectangle(bx - (bw/2), by - (bh/2), bw, bh);
         
         var tw = $.LayoutGenerated.BATT_TIP_W; var th = $.LayoutGenerated.BATT_TIP_H;
@@ -228,7 +231,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.drawText(CX, (yTimeUp + _timeH) - _dateH, FONT_SMALL, _lastDateStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
 
         // HR Group (Static Alignment)
-        drawHeartIcon(dc, $.Toybox.Graphics.COLOR_RED);
+        drawHeartIcon(dc, COLOR_HEART);
         dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
         dc.drawText($.LayoutGenerated.HR_TEXT_X, Y_HR, FONT_SMALL, _lastHrStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
 
@@ -348,19 +351,18 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         var info = $.Toybox.Time.Gregorian.info($.Toybox.Time.now(), $.Toybox.Time.FORMAT_SHORT);
         _lastDateStr = FaceLogic.getDateString(info);
         if ($.Toybox has :Weather) {
-            var conditions = $.Toybox.Weather.getCurrentConditions();
-            if (conditions != null) { updateWeather(conditions, dc); }
+            updateWeather($.Toybox.Weather.getCurrentConditions(), dc);
         }
     }
 
     //
     // Fetch and format weather condition and temperature data
     //
-    private function updateWeather(conditions as $.Toybox.Weather.CurrentConditions, dc as $.Toybox.Graphics.Dc) as Void {
-        var condition = conditions.condition;
-        if (condition != null && (condition != _lastWeatherCondition || _lastCondStr.equals(""))) {
-            _lastWeatherCondition = condition;
-            var str = WeatherGenerated.getConditionString(condition);
+    private function updateWeather(conditions as $.Toybox.Weather.CurrentConditions?, dc as $.Toybox.Graphics.Dc) as Void {
+        var condition = (conditions != null) ? conditions.condition : null;
+        if (condition != _lastWeatherCondition || _lastCondStr.equals("")) {
+            _lastWeatherCondition = (condition != null) ? condition : -1;
+            var str = (condition != null) ? WeatherGenerated.getConditionString(condition) : null;
             _lastCondStr = (str == null) ? _unknownStr : str;
             var condWidth = dc.getTextWidthInPixels(_lastCondStr, FONT_SMALL);
             if (condWidth > MAX_TEXT_WIDTH) {
@@ -368,10 +370,10 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
                 _condLine1 = lines[0]; _condLine2 = lines[1]; _isCondWrapped = true;
             } else { _isCondWrapped = false; }
         }
-        var temp = conditions.temperature;
+        var temp = (conditions != null) ? conditions.temperature : null;
         if (temp != _lastTempValue || _lastTempStr.equals("")) {
             _lastTempValue = (temp != null) ? temp as $.Toybox.Lang.Number : null;
-            _lastTempStr = FaceLogic.getTemperatureString(temp as $.Toybox.Lang.Number?);
+            _lastTempStr = FaceLogic.getTemperatureString(_lastTempValue);
         }
     }
 
