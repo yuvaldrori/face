@@ -62,7 +62,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private var _lastBufferMinute as $.Toybox.Lang.Number = -1;
     private var _timeH as $.Toybox.Lang.Number = 0;
     private var _dateH as $.Toybox.Lang.Number = 0;
-    private var _heartPoly as Array<[Numeric, Numeric]>? = null;
 
     function initialize() {
         WatchFace.initialize();
@@ -77,16 +76,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         _timeH = dc.getFontHeight(FONT_TIME);
         _dateH = dc.getFontHeight(FONT_SMALL);
         
-        // Pre-calculate heart polygon points relative to its anchor
-        var hx = $.LayoutGenerated.HR_X;
-        var hy = Y_HR + 14;
-        var poly = $.LayoutGenerated.HEART_POLY;
-        _heartPoly = [
-            [hx + poly[0][0], hy + poly[0][1]],
-            [hx + poly[1][0], hy + poly[1][1]],
-            [hx + poly[2][0], hy + poly[2][1]]
-        ] as Array<[Numeric, Numeric]>;
-
         initializeStaticBuffer();
         var clockTime = $.Toybox.System.getClockTime();
         updateLongTermData(clockTime, dc);
@@ -207,7 +196,11 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.fillRectangle(bx - 2, by - (bh/2) - 2, 4, 2); 
         dc.setColor(FaceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
         var fillH = ($.LayoutGenerated.BATT_FILL_MAX_H * (_batteryLevel / 100.0)).toNumber();
-        if (fillH > 0) { dc.fillRectangle(bx - (bw/2) + 1, by + (bh/2) - 1 - fillH, bw - 2, fillH); }
+        if (fillH > 0) { 
+            var px = $.LayoutGenerated.BATT_FILL_PADDING_X;
+            var py = $.LayoutGenerated.BATT_FILL_PADDING_Y;
+            dc.fillRectangle(bx - (bw/2) + px, by + (bh/2) - py - fillH, bw - (2*px), fillH); 
+        }
 
         var sx = $.LayoutGenerated.SX; var sy = $.LayoutGenerated.SY;
         dc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
@@ -307,13 +300,11 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Draw a vector-based heart icon
     //
     private function drawHeartIcon(dc as $.Toybox.Graphics.Dc, color as Number) as Void {
-        var poly = _heartPoly;
-        if (poly == null) { return; }
         dc.setColor(color, COLOR_BG);
         var hx = $.LayoutGenerated.HR_X;
-        var hy = Y_HR + 14;
+        var hy = $.LayoutGenerated.HR_ICON_Y;
         dc.fillCircle(hx - 5, hy - 5, 5); dc.fillCircle(hx + 5, hy - 5, 5);
-        dc.fillPolygon(poly);
+        dc.fillPolygon($.LayoutGenerated.HEART_POLY);
     }
 
     //

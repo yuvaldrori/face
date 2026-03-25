@@ -72,6 +72,8 @@ SOLAR_TRACK_END=$(awk "BEGIN { print int($SOLAR_CENTER + ($SOLAR_SPAN / 2) + 360
 BATT_W=10
 BATT_H=18
 BATT_FILL_MAX_H=16
+BATT_FILL_PADDING_X=1
+BATT_FILL_PADDING_Y=1
 SUN_R=5
 
 # Icon Horizontal Positions (Calculated for symmetrical spacing from edges)
@@ -106,6 +108,14 @@ HR_START_X=$(awk "BEGIN { print int($CX - ($HR_TOTAL_W / 2)) }")
 HR_X=$(awk "BEGIN { print int($HR_START_X + ($HR_ICON_W / 2)) }")
 HR_TEXT_X=$(awk "BEGIN { print int($HR_START_X + $HR_ICON_W + $HR_GAP) }")
 
+# Heart Icon Vertical Alignment
+HR_ICON_V_OFFSET=14
+HR_ICON_Y=$(awk "BEGIN { print int($Y_HR + $HR_ICON_V_OFFSET) }")
+
+# Pre-calculate Heart Polygon (relative to HR_X, HR_ICON_Y)
+# Base Poly: [[-10, -2], [10, -2], [0, 10]]
+HEART_POLY_MC="[[$(awk "BEGIN { print int($HR_X - 10) }"), $(awk "BEGIN { print int($HR_ICON_Y - 2) }")], [$(awk "BEGIN { print int($HR_X + 10) }"), $(awk "BEGIN { print int($HR_ICON_Y - 2) }")], [$(awk "BEGIN { print int($HR_X) }"), $(awk "BEGIN { print int($HR_ICON_Y + 10) }")]]"
+
 cat << EOM > "$MC_OUT"
 // Auto-generated layout constants for ${WIDTH}x${HEIGHT}
 // Target Device: Fenix 8 47mm Solar (MIP)
@@ -138,15 +148,18 @@ module LayoutGenerated {
     const BATT_W = $BATT_W;
     const BATT_H = $BATT_H;
     const BATT_FILL_MAX_H = $BATT_FILL_MAX_H;
+    const BATT_FILL_PADDING_X = $BATT_FILL_PADDING_X;
+    const BATT_FILL_PADDING_Y = $BATT_FILL_PADDING_Y;
     const SUN_R = $SUN_R;
 
     const HR_X = $HR_X;
+    const HR_ICON_Y = $HR_ICON_Y;
     const HR_TEXT_X = $HR_TEXT_X;
     
     const MAX_TEXT_WIDTH = 180;
     
     // Geometric constants
-    const HEART_POLY = [[-10, -2], [10, -2], [0, 10]];
+    const HEART_POLY = $HEART_POLY_MC;
     const SOLAR_RAYS = $SOLAR_RAYS_MC;
 }
 EOM
