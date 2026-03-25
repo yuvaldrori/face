@@ -2,7 +2,7 @@ import Toybox.Application;
 import Toybox.Lang;
 import Toybox.WatchUi;
 
-class faceApp extends $.Toybox.Application.AppBase {
+class FaceApp extends $.Toybox.Application.AppBase {
 
     function initialize() {
         AppBase.initialize();
@@ -18,11 +18,11 @@ class faceApp extends $.Toybox.Application.AppBase {
 
     // Return the initial view of your application here
     function getInitialView() as [$.Toybox.WatchUi.Views] or [$.Toybox.WatchUi.Views, $.Toybox.WatchUi.InputDelegates] {
-        return [ new faceView() ];
+        return [ new FaceView() ];
     }
 
 }
 
-function getApp() as faceApp {
-    return $.Toybox.Application.getApp() as faceApp;
+function getApp() as FaceApp {
+    return $.Toybox.Application.getApp() as FaceApp;
 }

@@ -41,17 +41,17 @@ function testDrawSafeArcSegments(logger as $.Toybox.Test.Logger) as $.Toybox.Lan
     
     // 20 degree arc -> 1 call
     mockDc.drawArcCalls = 0;
-    faceLogic.drawSafeArc(mockDc as $.Toybox.Graphics.Dc, 130, 130, 125, $.Toybox.Graphics.ARC_COUNTER_CLOCKWISE, 0, 20);
+    FaceLogic.drawSafeArc(mockDc as $.Toybox.Graphics.Dc, 130, 130, 125, $.Toybox.Graphics.ARC_COUNTER_CLOCKWISE, 0, 20);
     $.Toybox.Test.assertEqual(mockDc.drawArcCalls, 1);
     
     // 45 degree arc -> (45/20) + 1 = 3 segments
     mockDc.drawArcCalls = 0;
-    faceLogic.drawSafeArc(mockDc as $.Toybox.Graphics.Dc, 130, 130, 125, $.Toybox.Graphics.ARC_COUNTER_CLOCKWISE, 0, 45);
+    FaceLogic.drawSafeArc(mockDc as $.Toybox.Graphics.Dc, 130, 130, 125, $.Toybox.Graphics.ARC_COUNTER_CLOCKWISE, 0, 45);
     $.Toybox.Test.assertEqual(mockDc.drawArcCalls, 3);
     
     // 360 degree arc (full circle) -> (360/20) + 1 = 19 segments (since 360/20 is 18.0)
     mockDc.drawArcCalls = 0;
-    faceLogic.drawSafeArc(mockDc as $.Toybox.Graphics.Dc, 130, 130, 125, $.Toybox.Graphics.ARC_COUNTER_CLOCKWISE, 0, 360);
+    FaceLogic.drawSafeArc(mockDc as $.Toybox.Graphics.Dc, 130, 130, 125, $.Toybox.Graphics.ARC_COUNTER_CLOCKWISE, 0, 360);
     $.Toybox.Test.assertEqual(mockDc.drawArcCalls, 19);
     
     return true;
@@ -71,40 +71,40 @@ function testSolarIntensityClamping(logger as $.Toybox.Test.Logger) as $.Toybox.
 
 (:test)
 function testWrapAngle(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    $.Toybox.Test.assertEqual(faceLogic.wrapAngle(360), 0);
-    $.Toybox.Test.assertEqual(faceLogic.wrapAngle(405), 45);
-    $.Toybox.Test.assertEqual(faceLogic.wrapAngle(-45), 315);
-    $.Toybox.Test.assertEqual(faceLogic.wrapAngle(0), 0);
-    $.Toybox.Test.assertEqual(faceLogic.wrapAngle(180), 180);
+    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(360), 0);
+    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(405), 45);
+    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(-45), 315);
+    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(0), 0);
+    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(180), 180);
     return true;
 }
 
 (:test)
 function testTimeString(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    $.Toybox.Test.assertEqual(faceLogic.getTimeString(13, 5), "13:05");
-    $.Toybox.Test.assertEqual(faceLogic.getTimeString(0, 0), "0:00");
+    $.Toybox.Test.assertEqual(FaceLogic.getTimeString(13, 5), "13:05");
+    $.Toybox.Test.assertEqual(FaceLogic.getTimeString(0, 0), "0:00");
     return true;
 }
 
 (:test)
 function testTemperatureString(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    $.Toybox.Test.assertEqual(faceLogic.getTemperatureString(25), "25°");
-    $.Toybox.Test.assertEqual(faceLogic.getTemperatureString(null), "--°");
+    $.Toybox.Test.assertEqual(FaceLogic.getTemperatureString(25), "25°");
+    $.Toybox.Test.assertEqual(FaceLogic.getTemperatureString(null), "--°");
     return true;
 }
 
 (:test)
 function testHeartRateString(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    $.Toybox.Test.assertEqual(faceLogic.getHeartRateString(75), "75");
-    $.Toybox.Test.assertEqual(faceLogic.getHeartRateString(null), "--");
+    $.Toybox.Test.assertEqual(FaceLogic.getHeartRateString(75), "75");
+    $.Toybox.Test.assertEqual(FaceLogic.getHeartRateString(null), "--");
     return true;
 }
 
 (:test)
 function testBatteryColorLogic(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    $.Toybox.Test.assertEqual(faceLogic.getBatteryColor(21.0), $.Toybox.Graphics.COLOR_GREEN);
-    $.Toybox.Test.assertEqual(faceLogic.getBatteryColor(20.0), $.Toybox.Graphics.COLOR_RED);
-    $.Toybox.Test.assertEqual(faceLogic.getBatteryColor(5.0), $.Toybox.Graphics.COLOR_RED);
+    $.Toybox.Test.assertEqual(FaceLogic.getBatteryColor(21.0), $.Toybox.Graphics.COLOR_GREEN);
+    $.Toybox.Test.assertEqual(FaceLogic.getBatteryColor(20.0), $.Toybox.Graphics.COLOR_RED);
+    $.Toybox.Test.assertEqual(FaceLogic.getBatteryColor(5.0), $.Toybox.Graphics.COLOR_RED);
     return true;
 }
 
@@ -130,12 +130,12 @@ function testSplitStringLogic(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.B
     }
 
     logger.debug("Testing shortest weather string: " + shortest);
-    var resShort = faceLogic.splitString(shortest, mockDc as $.Toybox.Graphics.Dc, $.Toybox.Graphics.FONT_SMALL, maxWidth);
+    var resShort = FaceLogic.splitString(shortest, mockDc as $.Toybox.Graphics.Dc, $.Toybox.Graphics.FONT_SMALL, maxWidth);
     $.Toybox.Test.assertEqual(resShort[0], shortest);
     $.Toybox.Test.assertEqual(resShort[1], "");
 
     logger.debug("Testing longest weather string: " + longest);
-    var resLong = faceLogic.splitString(longest, mockDc as $.Toybox.Graphics.Dc, $.Toybox.Graphics.FONT_SMALL, maxWidth);
+    var resLong = FaceLogic.splitString(longest, mockDc as $.Toybox.Graphics.Dc, $.Toybox.Graphics.FONT_SMALL, maxWidth);
     
     // Longest should wrap if it exceeds maxWidth (18 chars in mock)
     if (longest.length() * 10 > maxWidth) {
@@ -152,14 +152,14 @@ function testDatePadding(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolea
     info.year = 2026;
     info.month = 1;
     info.day = 1;
-    $.Toybox.Test.assertEqual(faceLogic.getDateString(info), "2026-01-01");
+    $.Toybox.Test.assertEqual(FaceLogic.getDateString(info), "2026-01-01");
     return true;
 }
 
 (:test)
 function testUpdateLogic(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    $.Toybox.Test.assertEqual(faceLogic.needsFullUpdate(59, 0), true);
-    $.Toybox.Test.assertEqual(faceLogic.needsFullUpdate(15, 15), false);
+    $.Toybox.Test.assertEqual(FaceLogic.needsFullUpdate(59, 0), true);
+    $.Toybox.Test.assertEqual(FaceLogic.needsFullUpdate(15, 15), false);
     return true;
 }
 
@@ -182,7 +182,7 @@ function testWeatherWrappingExhaustive(logger as $.Toybox.Test.Logger) as $.Toyb
     for (var i = 0; i < conditions.size(); i++) {
         var str = WeatherGenerated.getConditionString(conditions[i]);
         if (str != null) {
-            var res = faceLogic.splitString(str, mockDc as $.Toybox.Graphics.Dc, $.Toybox.Graphics.FONT_SMALL, maxWidth);
+            var res = FaceLogic.splitString(str, mockDc as $.Toybox.Graphics.Dc, $.Toybox.Graphics.FONT_SMALL, maxWidth);
             
             // Basic validation: Either it didn't wrap, or it wrapped into exactly 2 lines
             $.Toybox.Test.assert(res instanceof $.Toybox.Lang.Array);
@@ -213,11 +213,11 @@ function testLayoutConstants(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Bo
 }
 (:test)
 function testPaletteCompleteness(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    var palette = faceLogic.getRequiredPalette();
+    var palette = FaceLogic.getRequiredPalette();
     
     // Check Battery Colors
-    var lowBatt = faceLogic.getBatteryColor(10.0);
-    var highBatt = faceLogic.getBatteryColor(50.0);
+    var lowBatt = FaceLogic.getBatteryColor(10.0);
+    var highBatt = FaceLogic.getBatteryColor(50.0);
     
     var foundLow = false;
     var foundHigh = false;
