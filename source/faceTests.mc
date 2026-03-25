@@ -1,3 +1,8 @@
+//
+// faceTests.mc
+// Unit test suite for FaceLogic and generated layout verification
+//
+
 import Toybox.Test;
 import Toybox.Lang;
 import Toybox.Time.Gregorian;
@@ -5,7 +10,10 @@ import Toybox.Weather;
 import Toybox.WatchUi;
 import Toybox.Graphics;
 
-// Mock DC for width testing - needs to inherit from Lang.Object to be valid in Monkey C
+//
+// Mock DC for width testing
+// Needs to inherit from Lang.Object to be valid in Monkey C
+//
 class MockDc extends $.Toybox.Lang.Object {
     var drawArcCalls as $.Toybox.Lang.Number = 0;
     
@@ -18,6 +26,9 @@ class MockDc extends $.Toybox.Lang.Object {
     }
 }
 
+//
+// Verify that the layout boundaries fit within the 260x260 screen
+//
 (:test)
 function testLayoutBoundaries(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     // CX is 130. HR_X (center of icon) is CX - 19 = 111. 
@@ -35,6 +46,9 @@ function testLayoutBoundaries(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.B
     return true;
 }
 
+//
+// Verify the segmentation logic of the safe arc helper
+//
 (:test)
 function testDrawSafeArcSegments(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     var mockDc = new MockDc();
@@ -57,6 +71,9 @@ function testDrawSafeArcSegments(logger as $.Toybox.Test.Logger) as $.Toybox.Lan
     return true;
 }
 
+//
+// Verify that solar intensity values are clamped appropriately
+//
 (:test)
 function testSolarIntensityClamping(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     var intensity = 150;
@@ -69,6 +86,9 @@ function testSolarIntensityClamping(logger as $.Toybox.Test.Logger) as $.Toybox.
     return true;
 }
 
+//
+// Verify basic angle wrapping logic
+//
 (:test)
 function testWrapAngle(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(360), 0);
@@ -79,6 +99,9 @@ function testWrapAngle(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean 
     return true;
 }
 
+//
+// Verify time string formatting (HH:mm)
+//
 (:test)
 function testTimeString(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     $.Toybox.Test.assertEqual(FaceLogic.getTimeString(13, 5), "13:05");
@@ -86,6 +109,9 @@ function testTimeString(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean
     return true;
 }
 
+//
+// Verify temperature string formatting with unit
+//
 (:test)
 function testTemperatureString(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     $.Toybox.Test.assertEqual(FaceLogic.getTemperatureString(25), "25°");
@@ -93,6 +119,9 @@ function testTemperatureString(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.
     return true;
 }
 
+//
+// Verify heart rate string formatting
+//
 (:test)
 function testHeartRateString(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     $.Toybox.Test.assertEqual(FaceLogic.getHeartRateString(75), "75");
@@ -100,6 +129,9 @@ function testHeartRateString(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Bo
     return true;
 }
 
+//
+// Verify battery color transitions based on level
+//
 (:test)
 function testBatteryColorLogic(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     $.Toybox.Test.assertEqual(FaceLogic.getBatteryColor(21.0), $.Toybox.Graphics.COLOR_GREEN);
@@ -108,6 +140,9 @@ function testBatteryColorLogic(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.
     return true;
 }
 
+//
+// Verify string splitting into multiple lines for weather display
+//
 (:test)
 function testSplitStringLogic(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     var mockDc = new MockDc();
@@ -146,6 +181,9 @@ function testSplitStringLogic(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.B
     return true;
 }
 
+//
+// Verify date string formatting (YYYY-MM-DD)
+//
 (:test)
 function testDatePadding(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     var info = new $.Toybox.Time.Gregorian.Info();
@@ -156,6 +194,9 @@ function testDatePadding(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolea
     return true;
 }
 
+//
+// Verify background redraw logic based on time transitions
+//
 (:test)
 function testUpdateLogic(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     $.Toybox.Test.assertEqual(FaceLogic.needsFullUpdate(59, 0), true);
@@ -163,6 +204,9 @@ function testUpdateLogic(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolea
     return true;
 }
 
+//
+// Exhaustive test of all weather conditions to ensure valid string mapping
+//
 (:test)
 function testWeatherMappingExhaustive(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     var conditions = WeatherGenerated.getAllConditions();
@@ -173,6 +217,9 @@ function testWeatherMappingExhaustive(logger as $.Toybox.Test.Logger) as $.Toybo
     return true;
 }
 
+//
+// Exhaustive test of string wrapping across all weather conditions
+//
 (:test)
 function testWeatherWrappingExhaustive(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     var mockDc = new MockDc();
@@ -202,6 +249,9 @@ function testWeatherWrappingExhaustive(logger as $.Toybox.Test.Logger) as $.Toyb
     return true;
 }
 
+//
+// Verify robust handling of string split edge cases
+//
 (:test)
 function testSplitStringEdgeCases(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     var mockDc = new MockDc();
@@ -226,6 +276,9 @@ function testSplitStringEdgeCases(logger as $.Toybox.Test.Logger) as $.Toybox.La
     return true;
 }
 
+//
+// Verify angle wrapping with large or negative values
+//
 (:test)
 function testWrapAngleExtreme(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(720), 0);
@@ -235,6 +288,9 @@ function testWrapAngleExtreme(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.B
     return true;
 }
 
+//
+// Verify that safe arcs handle the 360-degree full circle case
+//
 (:test)
 function testDrawSafeArcFullCircle(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     var mockDc = new MockDc();
@@ -248,6 +304,9 @@ function testDrawSafeArcFullCircle(logger as $.Toybox.Test.Logger) as $.Toybox.L
     return true;
 }
 
+//
+// Verify build-side generated layout constants for Fenix 8 47mm
+//
 (:test)
 function testLayoutConstants(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     // Verify Fenix 8 47mm (260x260) specific geometry
@@ -257,6 +316,10 @@ function testLayoutConstants(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Bo
     $.Toybox.Test.assertEqual($.LayoutGenerated.TOP_Y, 42);
     return true;
 }
+
+//
+// Verify that the static buffer palette is complete for all rendered elements
+//
 (:test)
 function testPaletteCompleteness(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     var palette = FaceLogic.getRequiredPalette();
