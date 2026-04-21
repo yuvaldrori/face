@@ -92,27 +92,29 @@ module FaceLogic {
 
     //
     // Strictly wrap an angle into the 0-360 range for hardware driver stability
+    // Supports Floats to maintain precision for overlap calculations
     //
-    function wrapAngle(angle as $.Toybox.Lang.Number) as $.Toybox.Lang.Number {
-        var a = angle % FULL_CIRCLE_DEGREES;
-        if (a < 0) { a += FULL_CIRCLE_DEGREES; }
+    function wrapAngle(angle as Numeric) as Numeric {
+        var a = angle.toFloat();
+        while (a < 0) { a += FULL_CIRCLE_DEGREES; }
+        while (a >= FULL_CIRCLE_DEGREES) { a -= FULL_CIRCLE_DEGREES; }
         return a;
     }
 
     //
     // Draw an arc in 20-degree segments to prevent the Fenix 8 Solar driver bug
     //
-    function drawSafeArc(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, radius as Number, direction as $.Toybox.Graphics.ArcDirection, start as Number, end as Number) as Void {
-        var totalAngle = 0;
+    function drawSafeArc(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, radius as Number, direction as $.Toybox.Graphics.ArcDirection, start as Numeric, end as Numeric) as Void {
+        var totalAngle = 0.0;
         if (direction == Graphics.ARC_COUNTER_CLOCKWISE) {
-            totalAngle = end - start;
+            totalAngle = (end - start).toFloat();
         } else {
-            totalAngle = start - end;
+            totalAngle = (start - end).toFloat();
         }
         
-        totalAngle %= FULL_CIRCLE_DEGREES;
-        if (totalAngle < 0) { totalAngle += FULL_CIRCLE_DEGREES; }
-        if (totalAngle == 0 && start != end) { totalAngle = FULL_CIRCLE_DEGREES; } // Handle full circle case
+        while (totalAngle < 0) { totalAngle += FULL_CIRCLE_DEGREES; }
+        while (totalAngle > FULL_CIRCLE_DEGREES) { totalAngle -= FULL_CIRCLE_DEGREES; }
+        if (totalAngle == 0 && start != end) { totalAngle = FULL_CIRCLE_DEGREES.toFloat(); } 
         if (totalAngle <= 0) { return; }
 
         if (totalAngle <= ARC_SEGMENT_DEGREES) {
@@ -125,7 +127,7 @@ module FaceLogic {
                 var next = (direction == Graphics.ARC_COUNTER_CLOCKWISE) ? (current + step) : (current - step);
                 // Add 0.5 degree overlap to prevent pixel gaps on MIP displays
                 var overlap = (direction == Graphics.ARC_COUNTER_CLOCKWISE) ? 0.5 : -0.5;
-                dc.drawArc(x, y, radius, direction, wrapAngle(current.toNumber()), wrapAngle((next + overlap).toNumber()));
+                dc.drawArc(x, y, radius, direction, wrapAngle(current), wrapAngle(next + overlap));
                 current = next;
             }
         }
