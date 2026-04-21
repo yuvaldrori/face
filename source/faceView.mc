@@ -27,6 +27,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private var _lastTempValue as $.Toybox.Lang.Number? = null;
     private var _lastBattLevel as $.Toybox.Lang.Float = -1.0;
     private var _lastSolarValue as $.Toybox.Lang.Number = -1;
+    private var _lastDateDay as $.Toybox.Lang.Number = -1;
 
     // Cached Layout and String Values
     private var _condLine1 as $.Toybox.Lang.String = "";
@@ -47,10 +48,10 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     
     private const FONT_SMALL = $.Toybox.Graphics.FONT_SMALL;
     private const FONT_TIME = $.Toybox.Graphics.FONT_NUMBER_THAI_HOT;
-    private const COLOR_MAIN = $.Toybox.Graphics.COLOR_WHITE;
-    private const COLOR_BG = $.Toybox.Graphics.COLOR_BLACK;
-    private const COLOR_HEART = $.Toybox.Graphics.COLOR_RED;
-    private const COLOR_GLYPH = $.Toybox.Graphics.COLOR_LT_GRAY;
+    private const COLOR_MAIN as $.Toybox.Graphics.ColorValue = FaceLogic.COLOR_WHITE;
+    private const COLOR_BG as $.Toybox.Graphics.ColorValue = FaceLogic.COLOR_BLACK;
+    private const COLOR_HEART as $.Toybox.Graphics.ColorValue = FaceLogic.COLOR_RED;
+    private const COLOR_GLYPH as $.Toybox.Graphics.ColorValue = FaceLogic.COLOR_LT_GRAY;
 
     private const Y_HR = $.LayoutGenerated.Y_HR;
     
@@ -114,6 +115,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Main Rendering Loop (1Hz Update)
     //
     function onUpdate(dc as $.Toybox.Graphics.Dc) as Void {
+        setAntiAliasSafe(dc, false); // AA Shield: Reset state before any buffer operations
         dc.clearClip();
         var clockTime = $.Toybox.System.getClockTime();
         var isFullUpdate = FaceLogic.needsFullUpdate(_lastUpdateMinute, clockTime.min);
@@ -180,7 +182,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.setPenWidth(ARC_PEN_WIDTH);
 
         // 1. Static Tracks
-        dc.setColor($.Toybox.Graphics.COLOR_DK_GRAY, COLOR_BG);
+        dc.setColor(FaceLogic.COLOR_DK_GRAY, COLOR_BG);
         FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.BATT_TRACK_START, $.LayoutGenerated.BATT_TRACK_END);
         FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, $.LayoutGenerated.SOLAR_TRACK_END);
 
@@ -192,7 +194,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         }
 
         if (_solarIntensity > 0) {
-            dc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
+            dc.setColor(FaceLogic.COLOR_YELLOW, COLOR_BG);
             var clampedIntensity = _solarIntensity > FaceLogic.PERCENT_MAX ? FaceLogic.PERCENT_MAX : _solarIntensity;
             var solarFillAngle = (clampedIntensity / FaceLogic.PERCENT_MAX) * $.LayoutGenerated.DATA_ARC_SPAN;
             FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, ($.LayoutGenerated.SOLAR_TRACK_START + solarFillAngle).toNumber());
@@ -215,7 +217,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         }
 
         var sx = $.LayoutGenerated.SX; var sy = $.LayoutGenerated.SY;
-        dc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
+        dc.setColor(FaceLogic.COLOR_YELLOW, COLOR_BG);
         dc.fillCircle(sx, sy, $.LayoutGenerated.SUN_R);
         var rays = $.LayoutGenerated.SOLAR_RAYS;
         for (var i = 0; i < rays.size(); i++) {
@@ -259,16 +261,16 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.setPenWidth(2);
         
         // 1. Full Alignment Grid
-        dc.setColor($.Toybox.Graphics.COLOR_WHITE, COLOR_BG);
+        dc.setColor(FaceLogic.COLOR_WHITE, COLOR_BG);
         dc.drawCircle(CX, CX, $.LayoutGenerated.SCREEN_RADIUS); // Screen Edge
 
-        dc.setColor($.Toybox.Graphics.COLOR_RED, COLOR_BG);
+        dc.setColor(FaceLogic.COLOR_RED, COLOR_BG);
         dc.drawLine(CX, 0, CX, $.LayoutGenerated.HEIGHT); dc.drawLine(0, CX, $.LayoutGenerated.WIDTH, CX); // Crosshair
         
-        dc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
+        dc.setColor(FaceLogic.COLOR_YELLOW, COLOR_BG);
         dc.drawLine(0, TOP_Y, $.LayoutGenerated.WIDTH, TOP_Y); // Arc Limit
         
-        dc.setColor($.Toybox.Graphics.COLOR_GREEN, COLOR_BG);
+        dc.setColor(FaceLogic.COLOR_GREEN, COLOR_BG);
         
         // 2. Data Bounding Boxes
         var timeW = dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME);
@@ -330,8 +332,14 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private function updateLongTermData(clockTime as $.Toybox.System.ClockTime, dc as $.Toybox.Graphics.Dc) as Void {
         updateSystemStats();
         _lastTimeStr = FaceLogic.getTimeString(clockTime.hour as $.Toybox.Lang.Number, clockTime.min as $.Toybox.Lang.Number);
-        var info = $.Toybox.Time.Gregorian.info($.Toybox.Time.now(), $.Toybox.Time.FORMAT_SHORT);
-        _lastDateStr = FaceLogic.getDateString(info);
+        
+        var now = $.Toybox.Time.now();
+        var info = $.Toybox.Time.Gregorian.info(now, $.Toybox.Time.FORMAT_SHORT);
+        if (info.day != _lastDateDay) {
+            _lastDateDay = info.day;
+            _lastDateStr = FaceLogic.getDateString(info);
+        }
+
         if ($.Toybox has :Weather) {
             updateWeather($.Toybox.Weather.getCurrentConditions(), dc);
         }

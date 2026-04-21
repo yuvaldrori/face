@@ -9,6 +9,15 @@ import Toybox.Graphics;
 
 module FaceLogic {
     
+    // Hardware-verified Palette Constants
+    const COLOR_BLACK = $.Toybox.Graphics.COLOR_BLACK as $.Toybox.Graphics.ColorValue;
+    const COLOR_DK_GRAY = $.Toybox.Graphics.COLOR_DK_GRAY as $.Toybox.Graphics.ColorValue;
+    const COLOR_LT_GRAY = $.Toybox.Graphics.COLOR_LT_GRAY as $.Toybox.Graphics.ColorValue;
+    const COLOR_WHITE = $.Toybox.Graphics.COLOR_WHITE as $.Toybox.Graphics.ColorValue;
+    const COLOR_YELLOW = $.Toybox.Graphics.COLOR_YELLOW as $.Toybox.Graphics.ColorValue;
+    const COLOR_RED = $.Toybox.Graphics.COLOR_RED as $.Toybox.Graphics.ColorValue;
+    const COLOR_GREEN = $.Toybox.Graphics.COLOR_GREEN as $.Toybox.Graphics.ColorValue;
+
     // Constants for business logic
     const BATT_THRESHOLD_LOW = 20.0;
     const PERCENT_MAX = 100.0;
@@ -25,13 +34,13 @@ module FaceLogic {
     //
     function getRequiredPalette() as Array<$.Toybox.Graphics.ColorValue> {
         return [
-            $.Toybox.Graphics.COLOR_BLACK,
-            $.Toybox.Graphics.COLOR_DK_GRAY,
-            $.Toybox.Graphics.COLOR_LT_GRAY,
-            $.Toybox.Graphics.COLOR_WHITE,
-            $.Toybox.Graphics.COLOR_YELLOW,
-            $.Toybox.Graphics.COLOR_RED,
-            $.Toybox.Graphics.COLOR_GREEN
+            COLOR_BLACK,
+            COLOR_DK_GRAY,
+            COLOR_LT_GRAY,
+            COLOR_WHITE,
+            COLOR_YELLOW,
+            COLOR_RED,
+            COLOR_GREEN
         ];
     }
 
@@ -46,7 +55,7 @@ module FaceLogic {
     // Determine battery color based on remaining percentage
     //
     function getBatteryColor(level as $.Toybox.Lang.Float) as $.Toybox.Graphics.ColorValue {
-        return (level <= BATT_THRESHOLD_LOW) ? $.Toybox.Graphics.COLOR_RED : $.Toybox.Graphics.COLOR_GREEN;
+        return (level <= BATT_THRESHOLD_LOW) ? COLOR_RED : COLOR_GREEN;
     }
 
     //
@@ -114,7 +123,9 @@ module FaceLogic {
             var current = start.toFloat();
             for (var i = 0; i < segments; i++) {
                 var next = (direction == Graphics.ARC_COUNTER_CLOCKWISE) ? (current + step) : (current - step);
-                dc.drawArc(x, y, radius, direction, wrapAngle(current.toNumber()), wrapAngle(next.toNumber()));
+                // Add 0.5 degree overlap to prevent pixel gaps on MIP displays
+                var overlap = (direction == Graphics.ARC_COUNTER_CLOCKWISE) ? 0.5 : -0.5;
+                dc.drawArc(x, y, radius, direction, wrapAngle(current.toNumber()), wrapAngle((next + overlap).toNumber()));
                 current = next;
             }
         }
@@ -134,13 +145,6 @@ module FaceLogic {
                 words.add(word);
             }
             searchStart = spaceIdx + 1;
-            spaceIdx = str.find(STR_SPACE); // Note: find() from 0 is not ideal, but Monkey C find(str, offset) is available in some versions
-            // Wait, Monkey C String.find() only takes one argument in many versions.
-            // Let's use a more compatible approach if find(str, offset) is risky, 
-            // but actually System 7+ should have it. 
-            // Let's check if we can improve the loop.
-            
-            // Re-evaluating: substring in a loop is still okay if we don't do it char-by-char.
             var remaining = str.substring(searchStart, str.length());
             if (remaining != null) {
                 spaceIdx = remaining.find(STR_SPACE);
