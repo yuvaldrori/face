@@ -9,6 +9,17 @@ import Toybox.Graphics;
 
 module FaceLogic {
     
+    // Constants for business logic
+    const BATT_THRESHOLD_LOW = 20.0;
+    const PERCENT_MAX = 100.0;
+    const ARC_SEGMENT_DEGREES = 20;
+    const FULL_CIRCLE_DEGREES = 360;
+
+    const STR_EMPTY = "";
+    const STR_DASHES = "--";
+    const STR_TEMP_DASHES = "--°";
+    const STR_SPACE = " ";
+
     //
     // Get the required 16-color palette for the static background buffer
     //
@@ -28,14 +39,14 @@ module FaceLogic {
     // Format heart rate as a string, handling null values
     //
     function getHeartRateString(rate as $.Toybox.Lang.Number?) as $.Toybox.Lang.String {
-        return (rate != null ? rate.toString() : "--");
+        return (rate != null ? rate.toString() : STR_DASHES);
     }
 
     //
     // Determine battery color based on remaining percentage
     //
     function getBatteryColor(level as $.Toybox.Lang.Float) as $.Toybox.Graphics.ColorValue {
-        return (level <= 20.0) ? $.Toybox.Graphics.COLOR_RED : $.Toybox.Graphics.COLOR_GREEN;
+        return (level <= BATT_THRESHOLD_LOW) ? $.Toybox.Graphics.COLOR_RED : $.Toybox.Graphics.COLOR_GREEN;
     }
 
     //
@@ -60,7 +71,7 @@ module FaceLogic {
     // Format temperature string with degree symbol
     //
     function getTemperatureString(temp as $.Toybox.Lang.Number?) as $.Toybox.Lang.String {
-        return $.Toybox.Lang.format("$1$°", [temp != null ? temp.format("%d") : "--"]);
+        return (temp != null) ? $.Toybox.Lang.format("$1$°", [temp.format("%d")]) : STR_TEMP_DASHES;
     }
 
     //
@@ -74,8 +85,8 @@ module FaceLogic {
     // Strictly wrap an angle into the 0-360 range for hardware driver stability
     //
     function wrapAngle(angle as $.Toybox.Lang.Number) as $.Toybox.Lang.Number {
-        var a = angle % 360;
-        if (a < 0) { a += 360; }
+        var a = angle % FULL_CIRCLE_DEGREES;
+        if (a < 0) { a += FULL_CIRCLE_DEGREES; }
         return a;
     }
 
@@ -90,15 +101,15 @@ module FaceLogic {
             totalAngle = start - end;
         }
         
-        totalAngle %= 360;
-        if (totalAngle < 0) { totalAngle += 360; }
-        if (totalAngle == 0 && start != end) { totalAngle = 360; } // Handle full circle case
+        totalAngle %= FULL_CIRCLE_DEGREES;
+        if (totalAngle < 0) { totalAngle += FULL_CIRCLE_DEGREES; }
+        if (totalAngle == 0 && start != end) { totalAngle = FULL_CIRCLE_DEGREES; } // Handle full circle case
         if (totalAngle <= 0) { return; }
 
-        if (totalAngle <= 20) {
+        if (totalAngle <= ARC_SEGMENT_DEGREES) {
             dc.drawArc(x, y, radius, direction, wrapAngle(start), wrapAngle(end));
         } else {
-            var segments = (totalAngle / 20.0).toNumber() + 1;
+            var segments = (totalAngle / (ARC_SEGMENT_DEGREES * 1.0)).toNumber() + 1;
             var step = totalAngle.toFloat() / segments.toFloat();
             var current = start.toFloat();
             for (var i = 0; i < segments; i++) {
@@ -114,35 +125,50 @@ module FaceLogic {
     //
     function splitString(str as $.Toybox.Lang.String, dc as $.Toybox.Graphics.Dc, font as $.Toybox.Graphics.FontDefinition, maxWidth as $.Toybox.Lang.Number) as [$.Toybox.Lang.String, $.Toybox.Lang.String] {
         var words = [] as Array<String>;
-        var currentWord = "";
-        for (var i = 0; i < str.length(); i++) {
-            var char = str.substring(i, i+1);
-            if (char != null && char.equals(" ")) {
-                if (currentWord.length() > 0) {
-                    words.add(currentWord);
-                    currentWord = "";
+        var searchStart = 0;
+        var spaceIdx = str.find(STR_SPACE);
+        
+        while (spaceIdx != null) {
+            var word = str.substring(searchStart, spaceIdx);
+            if (word != null && word.length() > 0) {
+                words.add(word);
+            }
+            searchStart = spaceIdx + 1;
+            spaceIdx = str.find(STR_SPACE); // Note: find() from 0 is not ideal, but Monkey C find(str, offset) is available in some versions
+            // Wait, Monkey C String.find() only takes one argument in many versions.
+            // Let's use a more compatible approach if find(str, offset) is risky, 
+            // but actually System 7+ should have it. 
+            // Let's check if we can improve the loop.
+            
+            // Re-evaluating: substring in a loop is still okay if we don't do it char-by-char.
+            var remaining = str.substring(searchStart, str.length());
+            if (remaining != null) {
+                spaceIdx = remaining.find(STR_SPACE);
+                if (spaceIdx != null) {
+                    spaceIdx += searchStart;
                 }
-            } else if (char != null) {
-                currentWord += char;
+            } else {
+                spaceIdx = null;
             }
         }
-        if (currentWord.length() > 0) {
-            words.add(currentWord);
+        
+        var lastWord = str.substring(searchStart, str.length());
+        if (lastWord != null && lastWord.length() > 0) {
+            words.add(lastWord);
         }
 
-        var line1 = "";
-        var line2 = "";
+        var line1 = STR_EMPTY;
+        var line2 = STR_EMPTY;
         var line1Full = false;
-        if (words.size() == 0) { return ["", ""]; }
+        if (words.size() == 0) { return [STR_EMPTY, STR_EMPTY]; }
 
         for (var i = 0; i < words.size(); i++) {
             if (!line1Full) {
-                var testLine = (line1.length() == 0) ? words[i] : line1 + " " + words[i];
+                var testLine = (line1.length() == 0) ? words[i] : line1 + STR_SPACE + words[i];
                 if (dc.getTextWidthInPixels(testLine, font) <= maxWidth) {
                     line1 = testLine;
                 } else {
                     if (line1.length() == 0) {
-                        // First word is already too long, put it on line 1 anyway
                         line1 = words[i];
                         line1Full = true;
                     } else {
@@ -151,7 +177,7 @@ module FaceLogic {
                     }
                 }
             } else {
-                line2 = (line2.length() == 0) ? words[i] : line2 + " " + words[i];
+                line2 = (line2.length() == 0) ? words[i] : line2 + STR_SPACE + words[i];
             }
         }
         return [line1, line2];

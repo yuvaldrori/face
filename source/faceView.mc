@@ -33,12 +33,12 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private var _condLine2 as $.Toybox.Lang.String = "";
     private var _isCondWrapped as $.Toybox.Lang.Boolean = false;
 
-    private var _lastHrStr as $.Toybox.Lang.String = "--";
+    private var _lastHrStr as $.Toybox.Lang.String = FaceLogic.STR_DASHES;
     private var _lastTimeStr as $.Toybox.Lang.String = "";
     private var _lastDateStr as $.Toybox.Lang.String = "";
     private var _lastCondStr as $.Toybox.Lang.String = "";
     private var _lastTempStr as $.Toybox.Lang.String = "";
-    private var _unknownStr as $.Toybox.Lang.String = "";
+    private var _unknownStr as $.Toybox.Lang.String = FaceLogic.STR_EMPTY;
 
     // Layout Constants (Optimized for 260x260 MIP)
     private const CX = $.LayoutGenerated.CX; 
@@ -70,6 +70,16 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         WatchFace.initialize();
         _hasAntiAlias = ($.Toybox.Graphics has :setAntiAlias);
         _unknownStr = $.Toybox.WatchUi.loadResource($.Rez.Strings.weather_gen_condition_unknown) as String;
+        _lastHrStr = FaceLogic.STR_DASHES;
+    }
+
+    //
+    // Helper to safely set anti-aliasing if supported
+    //
+    private function setAntiAliasSafe(dc as $.Toybox.Graphics.Dc, enable as $.Toybox.Lang.Boolean) as Void {
+        if (_hasAntiAlias) {
+            dc.setAntiAlias(enable);
+        }
     }
 
     //
@@ -121,20 +131,17 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
         // 2. Buffer Management (Redraw static elements if minute changed or buffer purged)
         if (isFullUpdate || _staticBuffer == null || _lastBufferMinute != clockTime.min) {
-            drawStaticBackground();
+            updateStaticBuffer();
             _lastBufferMinute = clockTime.min;
         }
 
         // 3. Hardware-Accelerated Redraw (Blit buffer to screen)
-        if (_staticBuffer != null) {
-            var buffer = _staticBuffer.get();
-            if (buffer instanceof $.Toybox.Graphics.BufferedBitmap) {
-                dc.drawBitmap(0, 0, buffer);
-            } else {
-                renderFullFallback(dc);
-            }
+        var bufferRef = _staticBuffer;
+        var buffer = (bufferRef != null) ? bufferRef.get() : null;
+        if (buffer instanceof $.Toybox.Graphics.BufferedBitmap) {
+            dc.drawBitmap(0, 0, buffer);
         } else {
-            renderFullFallback(dc);
+            renderStatic(dc);
         }
 
         // 4. Render Dynamic Text (High-Visibility Overlay)
@@ -146,25 +153,30 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     //
     // Render persistent UI elements into the background buffer
     //
-    private function drawStaticBackground() as Void {
+    private function updateStaticBuffer() as Void {
         var bufferRef = _staticBuffer;
         if (bufferRef == null) { return; }
         var buffer = bufferRef.get();
         if (!(buffer instanceof $.Toybox.Graphics.BufferedBitmap)) { return; }
 
-        var bDc = buffer.getDc();
-        bDc.setColor(COLOR_BG, COLOR_BG);
-        bDc.clear();
+        renderStatic(buffer.getDc());
+    }
 
-        renderAllArcs(bDc);
-        drawStaticIcons(bDc);
+    //
+    // Shared logic for all static elements (Arcs, Icons, Labels)
+    //
+    private function renderStatic(dc as $.Toybox.Graphics.Dc) as Void {
+        dc.setColor(COLOR_BG, COLOR_BG);
+        dc.clear();
+        renderAllArcs(dc);
+        drawStaticIcons(dc);
     }
 
     //
     // Shared logic for arc tracks and data fills
     //
     private function renderAllArcs(dc as $.Toybox.Graphics.Dc) as Void {
-        if (_hasAntiAlias) { dc.setAntiAlias(false); }
+        setAntiAliasSafe(dc, false);
         dc.setPenWidth(ARC_PEN_WIDTH);
 
         // 1. Static Tracks
@@ -174,15 +186,15 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
         // 2. Data Fills
         dc.setColor(FaceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
-        var battFillAngle = (_batteryLevel / 100.0) * $.LayoutGenerated.DATA_ARC_SPAN;
+        var battFillAngle = (_batteryLevel / FaceLogic.PERCENT_MAX) * $.LayoutGenerated.DATA_ARC_SPAN;
         if (battFillAngle > 0) {
             FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_CLOCKWISE, $.LayoutGenerated.BATT_START, ($.LayoutGenerated.BATT_START - battFillAngle).toNumber());
         }
 
         if (_solarIntensity > 0) {
             dc.setColor($.Toybox.Graphics.COLOR_YELLOW, COLOR_BG);
-            var clampedIntensity = _solarIntensity > 100 ? 100.0 : _solarIntensity;
-            var solarFillAngle = (clampedIntensity / 100.0) * $.LayoutGenerated.DATA_ARC_SPAN;
+            var clampedIntensity = _solarIntensity > FaceLogic.PERCENT_MAX ? FaceLogic.PERCENT_MAX : _solarIntensity;
+            var solarFillAngle = (clampedIntensity / FaceLogic.PERCENT_MAX) * $.LayoutGenerated.DATA_ARC_SPAN;
             FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, ($.LayoutGenerated.SOLAR_TRACK_START + solarFillAngle).toNumber());
         }
     }
@@ -192,20 +204,14 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     //
     private function drawStaticIcons(dc as $.Toybox.Graphics.Dc) as Void {
         dc.setPenWidth(1);
-        var bx = $.LayoutGenerated.BX; var by = $.LayoutGenerated.BY;
-        var bw = $.LayoutGenerated.BATT_W; var bh = $.LayoutGenerated.BATT_H;
         dc.setColor(COLOR_GLYPH, COLOR_BG);
-        dc.drawRectangle(bx - (bw/2), by - (bh/2), bw, bh);
-        
-        var tw = $.LayoutGenerated.BATT_TIP_W; var th = $.LayoutGenerated.BATT_TIP_H;
-        dc.fillRectangle(bx - (tw/2), by - (bh/2) - th, tw, th); 
+        dc.drawRectangle($.LayoutGenerated.BATT_RECT_X, $.LayoutGenerated.BATT_RECT_Y, $.LayoutGenerated.BATT_W, $.LayoutGenerated.BATT_H);
+        dc.fillRectangle($.LayoutGenerated.BATT_TIP_RECT_X, $.LayoutGenerated.BATT_TIP_RECT_Y, $.LayoutGenerated.BATT_TIP_W, $.LayoutGenerated.BATT_TIP_H); 
         
         dc.setColor(FaceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
-        var fillH = ($.LayoutGenerated.BATT_FILL_MAX_H * (_batteryLevel / 100.0)).toNumber();
+        var fillH = ($.LayoutGenerated.BATT_FILL_MAX_H * (_batteryLevel / FaceLogic.PERCENT_MAX)).toNumber();
         if (fillH > 0) { 
-            var px = $.LayoutGenerated.BATT_FILL_PADDING_X;
-            var py = $.LayoutGenerated.BATT_FILL_PADDING_Y;
-            dc.fillRectangle(bx - (bw/2) + px, by + (bh/2) - py - fillH, bw - (2*px), fillH); 
+            dc.fillRectangle($.LayoutGenerated.BATT_FILL_X, $.LayoutGenerated.BATT_FILL_Y_BASE - fillH, $.LayoutGenerated.BATT_FILL_W, fillH); 
         }
 
         var sx = $.LayoutGenerated.SX; var sy = $.LayoutGenerated.SY;
@@ -222,13 +228,11 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Render real-time text (Clock, HR, Weather) directly to the screen
     //
     private function renderDynamicUI(dc as $.Toybox.Graphics.Dc) as Void {
-        if (_hasAntiAlias) { dc.setAntiAlias(true); }
+        setAntiAliasSafe(dc, true);
         dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
 
-        var yTimeUp = TOP_Y;
-
-        dc.drawText(CX, yTimeUp, FONT_TIME,  _lastTimeStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(CX, (yTimeUp + _timeH) - _dateH, FONT_SMALL, _lastDateStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(CX, TOP_Y, FONT_TIME,  _lastTimeStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(CX, $.LayoutGenerated.DATE_Y, FONT_SMALL, _lastDateStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
 
         // HR Group (Static Alignment)
         drawHeartIcon(dc, COLOR_HEART);
@@ -244,24 +248,14 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         }
         dc.drawText(CX, Y_TEMP, FONT_SMALL, _lastTempStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
 
-        if (_hasAntiAlias) { dc.setAntiAlias(false); }
-    }
-
-    //
-    // Safety fallback if the background buffer is purged or unavailable
-    //
-    private function renderFullFallback(dc as $.Toybox.Graphics.Dc) as Void {
-        dc.setColor(COLOR_BG, COLOR_BG);
-        dc.clear();
-        renderAllArcs(dc);
-        drawStaticIcons(dc);
+        setAntiAliasSafe(dc, false);
     }
 
     //
     // Debug helper to verify geometric alignment
     //
     private function drawDebugOverlay(dc as $.Toybox.Graphics.Dc) as Void {
-        if (_hasAntiAlias) { dc.setAntiAlias(false); }
+        setAntiAliasSafe(dc, false);
         dc.setPenWidth(2);
         
         // 1. Full Alignment Grid
@@ -277,10 +271,8 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.setColor($.Toybox.Graphics.COLOR_GREEN, COLOR_BG);
         
         // 2. Data Bounding Boxes
-        var yTimeUp = TOP_Y;
-        
-        dc.drawRectangle(CX - dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME)/2, yTimeUp, dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME), _timeH);
-        dc.drawRectangle(CX - dc.getTextWidthInPixels(_lastDateStr, FONT_SMALL)/2, (yTimeUp + _timeH) - _dateH, dc.getTextWidthInPixels(_lastDateStr, FONT_SMALL), _dateH);
+        dc.drawRectangle(CX - dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME)/2, TOP_Y, dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME), _timeH);
+        dc.drawRectangle(CX - dc.getTextWidthInPixels(_lastDateStr, FONT_SMALL)/2, $.LayoutGenerated.DATE_Y, dc.getTextWidthInPixels(_lastDateStr, FONT_SMALL), _dateH);
 
         // Heart Rate
         var hrTextW = dc.getTextWidthInPixels(_lastHrStr, FONT_SMALL);
@@ -311,11 +303,9 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     //
     private function drawHeartIcon(dc as $.Toybox.Graphics.Dc, color as Number) as Void {
         dc.setColor(color, COLOR_BG);
-        var hx = $.LayoutGenerated.HR_X;
-        var hy = $.LayoutGenerated.HR_ICON_Y;
         var r = $.LayoutGenerated.HEART_LOBE_R;
-        var off = $.LayoutGenerated.HEART_LOBE_OFFSET;
-        dc.fillCircle(hx - off, hy - off, r); dc.fillCircle(hx + off, hy - off, r);
+        dc.fillCircle($.LayoutGenerated.HEART_LOBE_L_X, $.LayoutGenerated.HEART_LOBE_Y, r); 
+        dc.fillCircle($.LayoutGenerated.HEART_LOBE_R_X, $.LayoutGenerated.HEART_LOBE_Y, r);
         dc.fillPolygon($.LayoutGenerated.HEART_POLY);
     }
 

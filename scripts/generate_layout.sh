@@ -89,6 +89,15 @@ ICON_MARGIN=24
 BX=$ICON_MARGIN
 SX=$(awk "BEGIN { print int($WIDTH - $ICON_MARGIN) }")
 
+# Battery Icon Pre-calculations
+BATT_RECT_X=$(awk "BEGIN { print int($BX - ($BATT_W / 2)) }")
+BATT_RECT_Y=$(awk "BEGIN { print int($ICON_Y - ($BATT_H / 2)) }")
+BATT_TIP_RECT_X=$(awk "BEGIN { print int($BX - ($BATT_TIP_W / 2)) }")
+BATT_TIP_RECT_Y=$(awk "BEGIN { print int($BATT_RECT_Y - $BATT_TIP_H) }")
+BATT_FILL_X=$(awk "BEGIN { print int($BATT_RECT_X + $BATT_FILL_PADDING_X) }")
+BATT_FILL_Y_BASE=$(awk "BEGIN { print int($BATT_RECT_Y + $BATT_H - $BATT_FILL_PADDING_Y) }")
+BATT_FILL_W=$(awk "BEGIN { print int($BATT_W - (2 * $BATT_FILL_PADDING_X)) }")
+
 # Pre-calculate Solar Rays (8 rays, each: x1, y1, x2, y2)
 # Generates a static array to eliminate runtime trigonometric overhead.
 SOLAR_RAYS_MC="["
@@ -155,6 +164,7 @@ module LayoutGenerated {
     const Y_HR = $Y_HR;
     const Y_COND = $Y_COND;
     const Y_TEMP = $Y_TEMP;
+    const DATE_Y = $DATE_Y;
     const COND_WRAP_V_OFFSET = $COND_WRAP_V_OFFSET;
 
     const ARC_PEN_WIDTH = $ARC_PEN_WIDTH;
@@ -172,9 +182,14 @@ module LayoutGenerated {
 
     const BATT_W = $BATT_W;
     const BATT_H = $BATT_H;
+    const BATT_RECT_X = $BATT_RECT_X;
+    const BATT_RECT_Y = $BATT_RECT_Y;
+    const BATT_TIP_RECT_X = $BATT_TIP_RECT_X;
+    const BATT_TIP_RECT_Y = $BATT_TIP_RECT_Y;
+    const BATT_FILL_X = $BATT_FILL_X;
+    const BATT_FILL_Y_BASE = $BATT_FILL_Y_BASE;
+    const BATT_FILL_W = $BATT_FILL_W;
     const BATT_FILL_MAX_H = $BATT_FILL_MAX_H;
-    const BATT_FILL_PADDING_X = $BATT_FILL_PADDING_X;
-    const BATT_FILL_PADDING_Y = $BATT_FILL_PADDING_Y;
     const BATT_TIP_W = $BATT_TIP_W;
     const BATT_TIP_H = $BATT_TIP_H;
     
@@ -186,7 +201,9 @@ module LayoutGenerated {
     const HR_ICON_Y = $HR_ICON_Y;
     const HR_TEXT_X = $HR_TEXT_X;
     const HEART_LOBE_R = $HEART_LOBE_R;
-    const HEART_LOBE_OFFSET = $HEART_LOBE_OFFSET;
+    const HEART_LOBE_L_X = $(awk "BEGIN { print int($HR_X - $HEART_LOBE_OFFSET) }");
+    const HEART_LOBE_R_X = $(awk "BEGIN { print int($HR_X + $HEART_LOBE_OFFSET) }");
+    const HEART_LOBE_Y = $(awk "BEGIN { print int($HR_ICON_Y - $HEART_LOBE_OFFSET) }");
     
     const MAX_TEXT_WIDTH = 180;
     const DEBUG_GUIDE_R = $DEBUG_GUIDE_R;
