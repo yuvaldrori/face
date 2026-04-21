@@ -16,9 +16,34 @@ TEST_PRG = bin/face-test.prg
 # Build flags
 COMMON_FLAGS = -d $(DEVICE) -y $(DEVELOPER_KEY) -w -l 3
 
-.PHONY: all debug release clean run simulator test check-sim wait-sim generate
+.PHONY: help all debug release clean run simulator test check-sim wait-sim generate
 
 all: debug
+
+help:
+	@echo "Fenix 8 Solar MIP Watch Face - Build System"
+	@echo ""
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Primary Targets:"
+	@echo "  debug         Build debug PRG (default)"
+	@echo "  release       Build release PRG (optimized)"
+	@echo "  run           Build and run debug PRG in simulator"
+	@echo "  test          Build and run unit tests"
+	@echo "  clean         Remove build artifacts and generated files"
+	@echo ""
+	@echo "Development & Debugging:"
+	@echo "  generate      Regenerate layout and weather strings"
+	@echo "  debug-align   Build with alignment overlay enabled"
+	@echo "  run-align     Run with alignment overlay enabled"
+	@echo "  profile       Build for performance profiling (-k flag)"
+	@echo "  run-profile   Run with profiling enabled"
+	@echo "  heap-check    Run debug build with memory logging"
+	@echo ""
+	@echo "Simulator Utilities:"
+	@echo "  simulator     Start the Garmin simulator"
+	@echo "  check-sim     Check if simulator process is running"
+	@echo "  wait-sim      Wait for simulator to be ready on port 1234"
 
 # Generate weather strings and code from SDK docs
 generate:
