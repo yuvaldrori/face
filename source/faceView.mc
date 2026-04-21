@@ -271,28 +271,29 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.setColor($.Toybox.Graphics.COLOR_GREEN, COLOR_BG);
         
         // 2. Data Bounding Boxes
-        dc.drawRectangle(CX - dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME)/2, TOP_Y, dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME), _timeH);
-        dc.drawRectangle(CX - dc.getTextWidthInPixels(_lastDateStr, FONT_SMALL)/2, $.LayoutGenerated.DATE_Y, dc.getTextWidthInPixels(_lastDateStr, FONT_SMALL), _dateH);
+        var timeW = dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME);
+        dc.drawRectangle(CX - (timeW / 2), TOP_Y, timeW, _timeH);
+        
+        var dateW = dc.getTextWidthInPixels(_lastDateStr, FONT_SMALL);
+        dc.drawRectangle(CX - (dateW / 2), $.LayoutGenerated.DATE_Y, dateW, _dateH);
 
         // Heart Rate
         var hrTextW = dc.getTextWidthInPixels(_lastHrStr, FONT_SMALL);
-        var iconW = $.LayoutGenerated.HR_ICON_W;
-        var gap = $.LayoutGenerated.HR_GAP;
-        var totalHrW = iconW + gap + hrTextW;
-        var hrStartX = $.LayoutGenerated.HR_X - (iconW / 2);
+        var totalHrW = $.LayoutGenerated.HR_ICON_W + $.LayoutGenerated.HR_GAP + hrTextW;
+        var hrStartX = $.LayoutGenerated.HR_X - ($.LayoutGenerated.HR_ICON_W / 2);
         dc.drawRectangle(hrStartX, Y_HR, totalHrW, _dateH);
 
-        var condW = dc.getTextWidthInPixels(_lastCondStr, FONT_SMALL);
         if (_isCondWrapped) {
             var w1 = dc.getTextWidthInPixels(_condLine1, FONT_SMALL);
             var w2 = dc.getTextWidthInPixels(_condLine2, FONT_SMALL);
-            dc.drawRectangle(CX - w1/2, Y_COND - $.LayoutGenerated.COND_WRAP_V_OFFSET, w1, _dateH);
-            dc.drawRectangle(CX - w2/2, Y_COND, w2, _dateH);
+            dc.drawRectangle(CX - (w1 / 2), Y_COND - $.LayoutGenerated.COND_WRAP_V_OFFSET, w1, _dateH);
+            dc.drawRectangle(CX - (w2 / 2), Y_COND, w2, _dateH);
         } else {
-            dc.drawRectangle(CX - condW/2, Y_COND, condW, _dateH);
+            var condW = dc.getTextWidthInPixels(_lastCondStr, FONT_SMALL);
+            dc.drawRectangle(CX - (condW / 2), Y_COND, condW, _dateH);
         }
         var tempW = dc.getTextWidthInPixels(_lastTempStr, FONT_SMALL);
-        dc.drawRectangle(CX - tempW/2, Y_TEMP, tempW, _dateH);
+        dc.drawRectangle(CX - (tempW / 2), Y_TEMP, tempW, _dateH);
         
         var gr = $.LayoutGenerated.DEBUG_GUIDE_R;
         dc.drawCircle($.LayoutGenerated.BX, $.LayoutGenerated.BY, gr); dc.drawCircle($.LayoutGenerated.SX, $.LayoutGenerated.SY, gr);
@@ -327,6 +328,19 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Update system stats, clock, and solar data
     //
     private function updateLongTermData(clockTime as $.Toybox.System.ClockTime, dc as $.Toybox.Graphics.Dc) as Void {
+        updateSystemStats();
+        _lastTimeStr = FaceLogic.getTimeString(clockTime.hour as $.Toybox.Lang.Number, clockTime.min as $.Toybox.Lang.Number);
+        var info = $.Toybox.Time.Gregorian.info($.Toybox.Time.now(), $.Toybox.Time.FORMAT_SHORT);
+        _lastDateStr = FaceLogic.getDateString(info);
+        if ($.Toybox has :Weather) {
+            updateWeather($.Toybox.Weather.getCurrentConditions(), dc);
+        }
+    }
+
+    //
+    // Update battery and solar intensity
+    //
+    private function updateSystemStats() as Void {
         var stats = $.Toybox.System.getSystemStats();
         _batteryLevel = stats.battery;
         if (_batteryLevel != _lastBattLevel) { _lastBattLevel = _batteryLevel; }
@@ -336,12 +350,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         if (intensity != _lastSolarValue) {
             _lastSolarValue = intensity;
             _solarIntensity = intensity;
-        }
-        _lastTimeStr = FaceLogic.getTimeString(clockTime.hour as $.Toybox.Lang.Number, clockTime.min as $.Toybox.Lang.Number);
-        var info = $.Toybox.Time.Gregorian.info($.Toybox.Time.now(), $.Toybox.Time.FORMAT_SHORT);
-        _lastDateStr = FaceLogic.getDateString(info);
-        if ($.Toybox has :Weather) {
-            updateWeather($.Toybox.Weather.getCurrentConditions(), dc);
         }
     }
 
