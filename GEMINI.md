@@ -26,6 +26,7 @@ Research and empirical testing confirmed that `onPartialUpdate` is ineffective o
 - **Behavior:** The hardware frequently forces a full `onUpdate` refresh (1Hz) even when in low-power mode, bypassing the partial clipping state.
 - **Strategy (Minimal Full Redraw):** Instead of fighting for partial updates, we use a "Minimal Full Redraw" model:
     - **Static Background Buffer:** A 4-bit (16-color) `BufferedBitmap` caches the ring tracks, icons, and labels. This is updated only once per minute or on wake.
+    - **Consolidated Rendering:** All background elements MUST be rendered via a shared `renderStatic(dc)` method to ensure consistency between the buffer update and any fallback redraws.
     - **1Hz Redraw:** The main `onUpdate` loop performs a hardware-accelerated `drawBitmap` of the background and then overlays only the dynamic text (Clock, HR).
     - **Smart Polling:** Heart Rate polling is reduced to **once per minute** (on the minute change) when the watch is in low-power mode (`_isLowPower`). Live 1Hz HR polling occurs only when the user is actively viewing the face.
 
@@ -33,13 +34,14 @@ Research and empirical testing confirmed that `onPartialUpdate` is ineffective o
 Directly calling `dc.drawArc()` with large spans or crossing the 0/360-degree boundary can trigger a hardware driver failure that renders a muddy "orange circle" artifact.
 - **Ultra-Granular Segments:** All arcs are drawn using `drawSafeArc`, breaking segments into **20-degree chunks**.
 - **Angle Wrapping:** All angles are strictly wrapped to the `0-360` range.
-- **Anti-Aliasing Shield:** Shape primitives (arcs, icons) are drawn with anti-aliasing **OFF** to prevent driver crashes. Anti-aliasing is enabled **ONLY** for fonts.
+- **Anti-Aliasing Shield:** Shape primitives (arcs, icons) are drawn with anti-aliasing **OFF** to prevent driver crashes. Use the `setAntiAliasSafe(dc, enable)` helper to manage this state reliably across supported hardware.
 
 ## 3. Automation & Spatial Math
 
 The project uses a comprehensive `Makefile` to orchestrate the complex build and generation pipeline.
 
 ### Core Targets
+- **`make help`**: Displays a comprehensive list of all available build targets and utilities.
 - **`make debug` / `make release`**: Standard builds. Automatically trigger the `generate` target first.
 - **`make debug-align` / `make run-align`**: Specialized builds that use `debug.jungle` to enable the Alignment Overlay. These are essential for visual verification on hardware.
 - **`make test`**: Builds and executes the unit test suite (`source/faceTests.mc`) in the simulator.
@@ -48,7 +50,8 @@ The project uses a comprehensive `Makefile` to orchestrate the complex build and
 
 ### UI Generation & Static Layout
 To maintain peak performance, all UI layout constants MUST be managed via `scripts/generate_layout.sh`.
-- **Software Math Only:** The script must perform all geometric and trigonometric calculations using tools (e.g., `awk`). 
+- **Software Math Only:** The script must perform all geometric and trigonometric calculations using tools (e.g., `awk`). This includes icon dimensions, heart lobe centers, and ray offsets.
+- **Zero Runtime Math:** Source code (`source/`) MUST NOT perform layout-related arithmetic. All positions, dimensions, and static geometric structures (like the Heart Polygon) must be consumed as pre-calculated constants from `$.LayoutGenerated`.
 - **No Magic Comments:** Never use manual calculations in comments to derive numbers. Every value must be programmatically derived from core display metrics or documented font heights.
 
 ### Simulator Management
