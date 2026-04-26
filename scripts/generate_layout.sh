@@ -57,6 +57,8 @@ COND_WRAP_V_OFFSET=24
 
 # Arcs (Angles in Degrees, standard Connect IQ 0-360 range)
 ARC_PEN_WIDTH=6
+PEN_WIDTH_GLYPH=1
+PEN_WIDTH_DEBUG=2
 
 # Universal Arc Span (Degrees)
 DATA_ARC_SPAN=90
@@ -205,8 +207,11 @@ module LayoutGenerated {
     const HEART_LOBE_R_X = $(awk "BEGIN { print int($HR_X + $HEART_LOBE_OFFSET) }");
     const HEART_LOBE_Y = $(awk "BEGIN { print int($HR_ICON_Y - $HEART_LOBE_OFFSET) }");
     
-    const MAX_TEXT_WIDTH = 180;
+    const MAX_TEXT_WIDTH = $(awk "BEGIN { print int($WIDTH * 0.7) }");
     const DEBUG_GUIDE_R = $DEBUG_GUIDE_R;
+
+    const PEN_WIDTH_GLYPH = $PEN_WIDTH_GLYPH;
+    const PEN_WIDTH_DEBUG = $PEN_WIDTH_DEBUG;
     
     // Geometric constants
     const HEART_POLY = $HEART_POLY_MC;

@@ -214,7 +214,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Draw shared glyphs (Battery and Solar)
     //
     private function drawStaticIcons(dc as $.Toybox.Graphics.Dc) as Void {
-        dc.setPenWidth(1);
+        dc.setPenWidth($.LayoutGenerated.PEN_WIDTH_GLYPH);
         dc.setColor(COLOR_GLYPH, COLOR_BG);
         dc.drawRectangle($.LayoutGenerated.BATT_RECT_X, $.LayoutGenerated.BATT_RECT_Y, $.LayoutGenerated.BATT_W, $.LayoutGenerated.BATT_H);
         dc.fillRectangle($.LayoutGenerated.BATT_TIP_RECT_X, $.LayoutGenerated.BATT_TIP_RECT_Y, $.LayoutGenerated.BATT_TIP_W, $.LayoutGenerated.BATT_TIP_H); 
@@ -267,7 +267,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     //
     private function drawDebugOverlay(dc as $.Toybox.Graphics.Dc) as Void {
         setAntiAliasSafe(dc, false);
-        dc.setPenWidth(2);
+        dc.setPenWidth($.LayoutGenerated.PEN_WIDTH_DEBUG);
         
         // 1. Full Alignment Grid
         dc.setColor(FaceLogic.COLOR_WHITE, COLOR_BG);
