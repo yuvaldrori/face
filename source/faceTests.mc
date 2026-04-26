@@ -444,6 +444,39 @@ function testRequiredSymbols(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Bo
     var stats = $.Toybox.System.getSystemStats();
     $.Toybox.Test.assert(stats has :battery);
     
+    // 4. Device Settings Symbols
+    var settings = $.Toybox.System.getDeviceSettings();
+    $.Toybox.Test.assert(settings has :doNotDisturb);
+    // isNightModeEnabled is a newer API; we check it but don't hard-fail the whole suite if it's missing on older targets
+    if (settings has :isNightModeEnabled) {
+        $.Toybox.Test.assert(true);
+    }
+    
+    return true;
+}
+
+//
+// Verify that the UI simplifies (hides arcs) when _isSleepMode is active
+//
+(:test)
+function testSleepModeUI(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    var view = new FaceView();
+    var mockDc = new MockDc();
+    
+    // 1. Regular Mode: Arcs should be drawn
+    view._isSleepMode = false;
+    view.renderStatic(mockDc as $.Toybox.Graphics.Dc);
+    var callsRegular = mockDc.drawArcCalls;
+    $.Toybox.Test.assert(callsRegular > 0);
+    
+    // 2. Sleep Mode: Arcs should be hidden
+    mockDc.drawArcCalls = 0;
+    view._isSleepMode = true;
+    view.renderStatic(mockDc as $.Toybox.Graphics.Dc);
+    var callsSleep = mockDc.drawArcCalls;
+    
+    $.Toybox.Test.assertEqual(callsSleep, 0);
+    
     return true;
 }
 

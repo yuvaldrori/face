@@ -21,7 +21,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private var _batteryLevel as $.Toybox.Lang.Float = 0.0;
     private var _batteryRatio as $.Toybox.Lang.Float = 0.0;
     private var _isLowPower as $.Toybox.Lang.Boolean = true;
-    private var _isSleepMode as $.Toybox.Lang.Boolean = false;
+    public var _isSleepMode as $.Toybox.Lang.Boolean = false;
     
     // Value tracking for dirty-rect and change detection
     private var _lastHrValue as $.Toybox.Lang.Number = -1;
