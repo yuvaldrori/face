@@ -41,8 +41,8 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private var _lastTimeStr as $.Toybox.Lang.String = "";
     private var _lastCondStr as $.Toybox.Lang.String = "";
     private var _lastTempStr as $.Toybox.Lang.String = "";
-    private var _lastDateStr as $.Toybox.Lang.String = "";
-    private var _lastWakeStr as $.Toybox.Lang.String = "";
+    public var _lastDateStr as $.Toybox.Lang.String = "";
+    public var _lastWakeStr as $.Toybox.Lang.String = "";
     private var _unknownStr as $.Toybox.Lang.String = FaceLogic.STR_EMPTY;
 
     // Layout Constants (Optimized for 260x260 MIP)
@@ -258,7 +258,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     //
     // Render real-time text (Clock, HR, Weather) directly to the screen
     //
-    private function renderDynamicUI(dc as $.Toybox.Graphics.Dc) as Void {
+    public function renderDynamicUI(dc as $.Toybox.Graphics.Dc) as Void {
         setAntiAliasSafe(dc, true);
         
         var mainColor = _isSleepMode ? FaceLogic.COLOR_DK_GRAY : COLOR_MAIN;

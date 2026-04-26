@@ -28,6 +28,12 @@ class MockDc extends $.Toybox.Lang.Object {
         return 30; // Simple mock font height
     }
     
+    var drawTextItems as $.Toybox.Lang.Array<$.Toybox.Lang.String> = [] as Array<String>;
+    
+    function drawText(x as Numeric, y as Numeric, font as $.Toybox.Graphics.FontDefinition, text as $.Toybox.Lang.String, justification as $.Toybox.Graphics.TextJustification) as Void {
+        drawTextItems.add(text);
+    }
+
     function drawArc(x as $.Toybox.Lang.Number, y as $.Toybox.Lang.Number, r as $.Toybox.Lang.Number, d as $.Toybox.Graphics.ArcDirection, s as Numeric, e as Numeric) as Void {
         drawArcCalls++;
         lastStart = s.toNumber();
@@ -45,6 +51,7 @@ class MockDc extends $.Toybox.Lang.Object {
     function fillCircle(x as Numeric, y as Numeric, r as Numeric) as Void {}
     function drawRectangle(x as Numeric, y as Numeric, w as Numeric, h as Numeric) as Void {}
     function fillRectangle(x as Numeric, y as Numeric, w as Numeric, h as Numeric) as Void {}
+    function fillPolygon(pts as $.Toybox.Lang.Array<$.Toybox.Lang.Array<$.Toybox.Lang.Number>>) as Void {}
 }
 
 //
@@ -500,6 +507,53 @@ function testSleepModeUI(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolea
     var callsSleep = mockDc.drawArcCalls;
     
     $.Toybox.Test.assertEqual(callsSleep, 0);
+    
+    return true;
+}
+
+//
+// Verify that the UI correctly picks between Date and Wake Time
+//
+(:test)
+function testSleepModeWakeTimeLogic(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    var view = new FaceView();
+    var mockDc = new MockDc();
+    
+    view._lastDateStr = "SAT 25";
+    view._lastWakeStr = "Wake 07:00";
+    
+    // 1. Regular Mode: Should show Date even if wake time exists
+    view._isSleepMode = false;
+    mockDc.drawTextItems = [] as Array<String>;
+    view.renderDynamicUI(mockDc as $.Toybox.Graphics.Dc);
+    
+    var foundDate = false;
+    for (var i = 0; i < mockDc.drawTextItems.size(); i++) {
+        if (mockDc.drawTextItems[i].equals(view._lastDateStr)) { foundDate = true; break; }
+    }
+    $.Toybox.Test.assert(foundDate);
+    
+    // 2. Sleep Mode WITH Wake Time: Should show Wake Time
+    view._isSleepMode = true;
+    mockDc.drawTextItems = [] as Array<String>;
+    view.renderDynamicUI(mockDc as $.Toybox.Graphics.Dc);
+    
+    var foundWake = false;
+    for (var i = 0; i < mockDc.drawTextItems.size(); i++) {
+        if (mockDc.drawTextItems[i].equals(view._lastWakeStr)) { foundWake = true; break; }
+    }
+    $.Toybox.Test.assert(foundWake);
+    
+    // 3. Sleep Mode WITHOUT Wake Time: Should fallback to Date
+    view._lastWakeStr = "";
+    mockDc.drawTextItems = [] as Array<String>;
+    view.renderDynamicUI(mockDc as $.Toybox.Graphics.Dc);
+    
+    foundDate = false;
+    for (var i = 0; i < mockDc.drawTextItems.size(); i++) {
+        if (mockDc.drawTextItems[i].equals(view._lastDateStr)) { foundDate = true; break; }
+    }
+    $.Toybox.Test.assert(foundDate);
     
     return true;
 }
