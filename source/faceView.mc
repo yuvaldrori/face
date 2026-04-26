@@ -21,6 +21,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private var _batteryLevel as $.Toybox.Lang.Float = 0.0;
     private var _batteryRatio as $.Toybox.Lang.Float = 0.0;
     private var _isLowPower as $.Toybox.Lang.Boolean = true;
+    private var _isSystemSleep as $.Toybox.Lang.Boolean = false;
     
     // Value tracking for dirty-rect and change detection
     private var _lastHrValue as $.Toybox.Lang.Number = -1;
@@ -121,6 +122,14 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     function onUpdate(dc as $.Toybox.Graphics.Dc) as Void {
         setAntiAliasSafe(dc, false); // AA Shield: Reset state before any buffer operations
         dc.clearClip();
+        
+        var settings = $.Toybox.System.getDeviceSettings();
+        var isDnd = (settings has :doNotDisturb) ? settings.doNotDisturb : false;
+        if (isDnd != _isSystemSleep) {
+            _isSystemSleep = isDnd;
+            _lastUpdateMinute = -1; // Force full buffer redraw on sleep state change
+        }
+
         var clockTime = $.Toybox.System.getClockTime();
         var isFullUpdate = FaceLogic.needsFullUpdate(_lastUpdateMinute, clockTime.min);
 
@@ -181,8 +190,11 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     public function renderStatic(dc as $.Toybox.Graphics.Dc) as Void {
         dc.setColor(COLOR_BG, COLOR_BG);
         dc.clear();
-        renderAllArcs(dc);
-        drawStaticIcons(dc);
+        
+        if (!_isSystemSleep) {
+            renderAllArcs(dc);
+            drawStaticIcons(dc);
+        }
     }
 
     //
@@ -240,24 +252,28 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     //
     private function renderDynamicUI(dc as $.Toybox.Graphics.Dc) as Void {
         setAntiAliasSafe(dc, true);
-        dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
+        
+        var mainColor = _isSystemSleep ? FaceLogic.COLOR_DK_GRAY : COLOR_MAIN;
+        dc.setColor(mainColor, $.Toybox.Graphics.COLOR_TRANSPARENT);
 
         dc.drawText(CX, TOP_Y, FONT_TIME,  _lastTimeStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(CX, $.LayoutGenerated.DATE_Y, FONT_SMALL, _lastDateStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
 
-        // HR Group (Static Alignment)
-        drawHeartIcon(dc, COLOR_HEART);
-        dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
-        dc.drawText($.LayoutGenerated.HR_TEXT_X, Y_HR, FONT_SMALL, _lastHrStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
+        if (!_isSystemSleep) {
+            // HR Group (Static Alignment)
+            drawHeartIcon(dc, COLOR_HEART);
+            dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
+            dc.drawText($.LayoutGenerated.HR_TEXT_X, Y_HR, FONT_SMALL, _lastHrStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
 
-        // Weather Group (Semi-Static)
-        if (_isCondWrapped) {
-            dc.drawText(CX, Y_COND - $.LayoutGenerated.COND_WRAP_V_OFFSET, FONT_SMALL, _condLine1, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(CX, Y_COND, FONT_SMALL, _condLine2, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
-        } else {
-            dc.drawText(CX, Y_COND, FONT_SMALL, _lastCondStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
+            // Weather Group (Semi-Static)
+            if (_isCondWrapped) {
+                dc.drawText(CX, Y_COND - $.LayoutGenerated.COND_WRAP_V_OFFSET, FONT_SMALL, _condLine1, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(CX, Y_COND, FONT_SMALL, _condLine2, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
+            } else {
+                dc.drawText(CX, Y_COND, FONT_SMALL, _lastCondStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
+            }
+            dc.drawText(CX, Y_TEMP, FONT_SMALL, _lastTempStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
         }
-        dc.drawText(CX, Y_TEMP, FONT_SMALL, _lastTempStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
 
         setAntiAliasSafe(dc, false);
     }
