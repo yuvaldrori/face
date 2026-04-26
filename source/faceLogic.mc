@@ -19,7 +19,6 @@ module FaceLogic {
     const COLOR_GREEN = $.Toybox.Graphics.COLOR_GREEN as $.Toybox.Graphics.ColorValue;
 
     // Constants for business logic
-    const BATT_THRESHOLD_LOW = 20.0;
     const PERCENT_MAX = 100.0;
     const ARC_SEGMENT_DEGREES = 20;
     const FULL_CIRCLE_DEGREES = 360;
@@ -49,13 +48,6 @@ module FaceLogic {
     //
     function getHeartRateString(rate as $.Toybox.Lang.Number?) as $.Toybox.Lang.String {
         return (rate != null ? rate.toString() : STR_DASHES);
-    }
-
-    //
-    // Determine battery color based on remaining percentage
-    //
-    function getBatteryColor(level as $.Toybox.Lang.Float) as $.Toybox.Graphics.ColorValue {
-        return (level <= BATT_THRESHOLD_LOW) ? COLOR_RED : COLOR_GREEN;
     }
 
     //

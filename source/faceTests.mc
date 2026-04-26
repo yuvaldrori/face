@@ -196,9 +196,10 @@ function testHeartRateString(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Bo
 //
 (:test)
 function testBatteryColorLogic(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    $.Toybox.Test.assertEqual(FaceLogic.getBatteryColor(21.0), $.Toybox.Graphics.COLOR_GREEN);
-    $.Toybox.Test.assertEqual(FaceLogic.getBatteryColor(20.0), $.Toybox.Graphics.COLOR_RED);
-    $.Toybox.Test.assertEqual(FaceLogic.getBatteryColor(5.0), $.Toybox.Graphics.COLOR_RED);
+    var view = new FaceView();
+    $.Toybox.Test.assertEqual(view.getBatteryColor(21.0), $.Toybox.Graphics.COLOR_GREEN);
+    $.Toybox.Test.assertEqual(view.getBatteryColor(20.0), $.Toybox.Graphics.COLOR_RED);
+    $.Toybox.Test.assertEqual(view.getBatteryColor(5.0), $.Toybox.Graphics.COLOR_RED);
     return true;
 }
 

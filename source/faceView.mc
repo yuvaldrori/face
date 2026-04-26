@@ -19,6 +19,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private var _hasAntiAlias as $.Toybox.Lang.Boolean = false;
     private var _solarIntensity as $.Toybox.Lang.Number = 0;
     private var _batteryLevel as $.Toybox.Lang.Float = 0.0;
+    private var _batteryRatio as $.Toybox.Lang.Float = 0.0;
     private var _isLowPower as $.Toybox.Lang.Boolean = true;
     
     // Value tracking for dirty-rect and change detection
@@ -28,6 +29,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private var _lastBattLevel as $.Toybox.Lang.Float = -1.0;
     private var _lastSolarValue as $.Toybox.Lang.Number = -1;
     private var _lastDateDay as $.Toybox.Lang.Number = -1;
+    private var _solarRatio as $.Toybox.Lang.Float = 0.0;
 
     // Cached Layout and String Values
     private var _condLine1 as $.Toybox.Lang.String = "";
@@ -60,6 +62,8 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
     private const ARC_PEN_WIDTH = $.LayoutGenerated.ARC_PEN_WIDTH;
     private const MAX_TEXT_WIDTH = $.LayoutGenerated.MAX_TEXT_WIDTH;
+    
+    private const BATT_THRESHOLD_LOW = 20.0;
 
     // Static Background Buffer (Track arcs, icons, and labels)
     private var _staticBuffer as $.Toybox.Graphics.BufferedBitmapReference? = null;
@@ -153,6 +157,13 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     }
 
     //
+    // Determine battery color based on remaining percentage
+    //
+    public function getBatteryColor(level as $.Toybox.Lang.Float) as $.Toybox.Graphics.ColorValue {
+        return (level <= BATT_THRESHOLD_LOW) ? COLOR_HEART : FaceLogic.COLOR_GREEN;
+    }
+
+    //
     // Render persistent UI elements into the background buffer
     //
     private function updateStaticBuffer() as Void {
@@ -186,16 +197,15 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, $.LayoutGenerated.SOLAR_TRACK_END);
 
         // 2. Data Fills
-        dc.setColor(FaceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
-        var battFillAngle = (_batteryLevel / FaceLogic.PERCENT_MAX) * $.LayoutGenerated.DATA_ARC_SPAN;
+        dc.setColor(getBatteryColor(_batteryLevel), COLOR_BG);
+        var battFillAngle = _batteryRatio * $.LayoutGenerated.DATA_ARC_SPAN;
         if (battFillAngle > 0) {
             FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_CLOCKWISE, $.LayoutGenerated.BATT_START, ($.LayoutGenerated.BATT_START - battFillAngle).toNumber());
         }
 
-        if (_solarIntensity > 0) {
+        if (_solarRatio > 0) {
             dc.setColor(FaceLogic.COLOR_YELLOW, COLOR_BG);
-            var clampedIntensity = _solarIntensity > FaceLogic.PERCENT_MAX ? FaceLogic.PERCENT_MAX : _solarIntensity;
-            var solarFillAngle = (clampedIntensity / FaceLogic.PERCENT_MAX) * $.LayoutGenerated.DATA_ARC_SPAN;
+            var solarFillAngle = _solarRatio * $.LayoutGenerated.DATA_ARC_SPAN;
             FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, ($.LayoutGenerated.SOLAR_TRACK_START + solarFillAngle).toNumber());
         }
     }
@@ -209,8 +219,8 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.drawRectangle($.LayoutGenerated.BATT_RECT_X, $.LayoutGenerated.BATT_RECT_Y, $.LayoutGenerated.BATT_W, $.LayoutGenerated.BATT_H);
         dc.fillRectangle($.LayoutGenerated.BATT_TIP_RECT_X, $.LayoutGenerated.BATT_TIP_RECT_Y, $.LayoutGenerated.BATT_TIP_W, $.LayoutGenerated.BATT_TIP_H); 
         
-        dc.setColor(FaceLogic.getBatteryColor(_batteryLevel), COLOR_BG);
-        var fillH = ($.LayoutGenerated.BATT_FILL_MAX_H * (_batteryLevel / FaceLogic.PERCENT_MAX)).toNumber();
+        dc.setColor(getBatteryColor(_batteryLevel), COLOR_BG);
+        var fillH = ($.LayoutGenerated.BATT_FILL_MAX_H * _batteryRatio).toNumber();
         if (fillH > 0) { 
             dc.fillRectangle($.LayoutGenerated.BATT_FILL_X, $.LayoutGenerated.BATT_FILL_Y_BASE - fillH, $.LayoutGenerated.BATT_FILL_W, fillH); 
         }
@@ -317,10 +327,18 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private function updateHeartRate() as Void {
         if ($.Toybox has :Activity) {
             var activityInfo = $.Toybox.Activity.getActivityInfo();
-            var rate = (activityInfo != null) ? activityInfo.currentHeartRate : -1;
-            if (rate != _lastHrValue) {
-                _lastHrValue = (rate != null) ? rate as $.Toybox.Lang.Number : -1;
-                _lastHrStr = FaceLogic.getHeartRateString(rate == -1 ? null : rate);
+            var rate = (activityInfo != null) ? activityInfo.currentHeartRate : null as Number?;
+            
+            // Fallback to ActivityMonitor if real-time activity HR is null
+            if (rate == null && ($.Toybox has :ActivityMonitor)) {
+                var amInfo = $.Toybox.ActivityMonitor.getInfo();
+                rate = (amInfo != null) ? amInfo.heartRate : null as Number?;
+            }
+
+            var rateVal = (rate != null) ? rate as Number : -1;
+            if (rateVal != _lastHrValue) {
+                _lastHrValue = rateVal;
+                _lastHrStr = FaceLogic.getHeartRateString(rateVal == -1 ? null : rateVal);
             }
         }
     }
@@ -350,6 +368,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private function updateSystemStats() as Void {
         var stats = $.Toybox.System.getSystemStats();
         _batteryLevel = stats.battery;
+        _batteryRatio = _batteryLevel / FaceLogic.PERCENT_MAX;
         if (_batteryLevel != _lastBattLevel) { _lastBattLevel = _batteryLevel; }
         
         var intensity = (stats has :solarIntensity) ? stats.solarIntensity : 0;
@@ -357,6 +376,8 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         if (intensity != _lastSolarValue) {
             _lastSolarValue = intensity;
             _solarIntensity = intensity;
+            var clampedIntensity = _solarIntensity > FaceLogic.PERCENT_MAX ? FaceLogic.PERCENT_MAX : _solarIntensity;
+            _solarRatio = clampedIntensity / FaceLogic.PERCENT_MAX;
         }
     }
 
