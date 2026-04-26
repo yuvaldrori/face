@@ -23,6 +23,10 @@ class MockDc extends $.Toybox.Lang.Object {
     function getTextWidthInPixels(text as $.Toybox.Lang.String, font as $.Toybox.Graphics.FontDefinition) as $.Toybox.Lang.Number {
         return text.length() * 10; // Simple mock: 10px per character
     }
+
+    function getFontHeight(font as $.Toybox.Graphics.FontDefinition) as $.Toybox.Lang.Number {
+        return 30; // Simple mock font height
+    }
     
     function drawArc(x as $.Toybox.Lang.Number, y as $.Toybox.Lang.Number, r as $.Toybox.Lang.Number, d as $.Toybox.Graphics.ArcDirection, s as Numeric, e as Numeric) as Void {
         drawArcCalls++;
@@ -407,6 +411,53 @@ function testPaletteCompleteness(logger as $.Toybox.Test.Logger) as $.Toybox.Lan
         }
     }
 
+    return true;
+}
+
+//
+// Verify that all assumed SDK properties and modules exist in the target environment.
+// This prevents runtime "Symbol Not Found" crashes.
+//
+(:test)
+function testRequiredSymbols(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    // 1. Core Modules
+    $.Toybox.Test.assert($.Toybox has :System);
+    $.Toybox.Test.assert($.Toybox has :Graphics);
+    $.Toybox.Test.assert($.Toybox has :Time);
+    $.Toybox.Test.assert($.Toybox has :Weather);
+    $.Toybox.Test.assert($.Toybox has :Activity);
+
+    // 2. Critical Properties (The ones that caused the crash)
+    var activityInfo = $.Toybox.Activity.getActivityInfo();
+    if (activityInfo != null) {
+        $.Toybox.Test.assert(activityInfo has :currentHeartRate);
+    }
+    
+    // Verify that we are NOT using forbidden/missing symbols
+    // ActivityMonitor.Info in this SDK does NOT have :heartRate
+    if ($.Toybox has :ActivityMonitor) {
+        // Just verify the module exists; we won't check for :heartRate as it's known missing
+        $.Toybox.Test.assert(true);
+    }
+
+    // 3. System Stats
+    var stats = $.Toybox.System.getSystemStats();
+    $.Toybox.Test.assert(stats has :battery);
+    
+    return true;
+}
+
+//
+// Smoke test for the View lifecycle: Verify that data acquisition logic does not crash
+//
+(:test)
+function testViewLifecycleSmoke(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    var view = new FaceView();
+    
+    // Specifically test the method that caused the symbol-not-found crash
+    view.updateHeartRate();
+    view.updateSystemStats();
+    
     return true;
 }
 

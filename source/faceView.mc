@@ -324,17 +324,11 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     //
     // Fetch and update the heart rate sensor data
     //
-    private function updateHeartRate() as Void {
+    public function updateHeartRate() as Void {
         if ($.Toybox has :Activity) {
             var activityInfo = $.Toybox.Activity.getActivityInfo();
             var rate = (activityInfo != null) ? activityInfo.currentHeartRate : null as Number?;
             
-            // Fallback to ActivityMonitor if real-time activity HR is null
-            if (rate == null && ($.Toybox has :ActivityMonitor)) {
-                var amInfo = $.Toybox.ActivityMonitor.getInfo();
-                rate = (amInfo != null) ? amInfo.heartRate : null as Number?;
-            }
-
             var rateVal = (rate != null) ? rate as Number : -1;
             if (rateVal != _lastHrValue) {
                 _lastHrValue = rateVal;
@@ -365,7 +359,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     //
     // Update battery and solar intensity
     //
-    private function updateSystemStats() as Void {
+    public function updateSystemStats() as Void {
         var stats = $.Toybox.System.getSystemStats();
         _batteryLevel = stats.battery;
         _batteryRatio = _batteryLevel / FaceLogic.PERCENT_MAX;
