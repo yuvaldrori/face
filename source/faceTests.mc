@@ -16,6 +16,7 @@ import Toybox.Graphics;
 //
 class MockDc extends $.Toybox.Lang.Object {
     var drawArcCalls as $.Toybox.Lang.Number = 0;
+    var setAntiAliasCalls as $.Toybox.Lang.Number = 0;
     var lastStart as $.Toybox.Lang.Number = 0;
     var lastEnd as $.Toybox.Lang.Float = 0.0;
     
@@ -28,6 +29,18 @@ class MockDc extends $.Toybox.Lang.Object {
         lastStart = s.toNumber();
         lastEnd = e.toFloat();
     }
+
+    function setAntiAlias(enable as $.Toybox.Lang.Boolean) as Void {
+        setAntiAliasCalls++;
+    }
+
+    function setColor(f as $.Toybox.Graphics.ColorValue, b as $.Toybox.Graphics.ColorValue) as Void {}
+    function setPenWidth(w as $.Toybox.Lang.Number) as Void {}
+    function clear() as Void {}
+    function drawLine(x1 as Numeric, y1 as Numeric, x2 as Numeric, y2 as Numeric) as Void {}
+    function fillCircle(x as Numeric, y as Numeric, r as Numeric) as Void {}
+    function drawRectangle(x as Numeric, y as Numeric, w as Numeric, h as Numeric) as Void {}
+    function fillRectangle(x as Numeric, y as Numeric, w as Numeric, h as Numeric) as Void {}
 }
 
 //
@@ -76,6 +89,46 @@ function testDrawSafeArcSegments(logger as $.Toybox.Test.Logger) as $.Toybox.Lan
     mockDc.drawArcCalls = 0;
     FaceLogic.drawSafeArc(mockDc as $.Toybox.Graphics.Dc, 130, 130, 125, $.Toybox.Graphics.ARC_COUNTER_CLOCKWISE, 0, 360);
     $.Toybox.Test.assertEqual(mockDc.drawArcCalls, 19);
+    
+    return true;
+}
+
+//
+// Verify that clockwise arcs correctly calculate segments and apply negative overlap
+//
+(:test)
+function testDrawSafeArcClockwise(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    var mockDc = new MockDc();
+    
+    // 40 degree CW arc (e.g. 100 to 60) -> 3 segments
+    mockDc.drawArcCalls = 0;
+    FaceLogic.drawSafeArc(mockDc as $.Toybox.Graphics.Dc, 130, 130, 125, $.Toybox.Graphics.ARC_CLOCKWISE, 100, 60);
+    $.Toybox.Test.assertEqual(mockDc.drawArcCalls, 3);
+    
+    // End angle should be 60 - 0.5 = 59.5
+    var diff = mockDc.lastEnd - 59.5;
+    if (diff < 0) { diff = -diff; }
+    $.Toybox.Test.assert(diff < 0.001);
+    
+    return true;
+}
+
+//
+// Verify that static rendering paths (for buffers) do NOT attempt to toggle anti-aliasing
+//
+(:test)
+function testAntiAliasShield(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    var mockDc = new MockDc();
+    var view = new FaceView();
+    
+    // We use a trick: Call renderStatic directly with our MockDc
+    // If it calls setAntiAlias, our mock will record it
+    view.renderStatic(mockDc as $.Toybox.Graphics.Dc);
+    
+    if (mockDc.setAntiAliasCalls > 0) {
+        logger.error("Static rendering path violated AA Shield: setAntiAlias was called");
+        return false;
+    }
     
     return true;
 }
@@ -332,27 +385,26 @@ function testLayoutConstants(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Bo
 (:test)
 function testPaletteCompleteness(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     var palette = FaceLogic.getRequiredPalette();
-    
-    // Check Battery Colors
-    var lowBatt = FaceLogic.getBatteryColor(10.0);
-    var highBatt = FaceLogic.getBatteryColor(50.0);
-    
-    var foundLow = false;
-    var foundHigh = false;
-    for (var i = 0; i < palette.size(); i++) {
-        if (palette[i] == lowBatt) { foundLow = true; }
-        if (palette[i] == highBatt) { foundHigh = true; }
+    var required = [
+        FaceLogic.COLOR_BLACK,
+        FaceLogic.COLOR_DK_GRAY,
+        FaceLogic.COLOR_LT_GRAY,
+        FaceLogic.COLOR_WHITE,
+        FaceLogic.COLOR_YELLOW,
+        FaceLogic.COLOR_RED,
+        FaceLogic.COLOR_GREEN
+    ];
+
+    for (var i = 0; i < required.size(); i++) {
+        var found = false;
+        for (var j = 0; j < palette.size(); j++) {
+            if (palette[j] == required[i]) { found = true; break; }
+        }
+        if (!found) { 
+            logger.error("Required color " + required[i] + " missing from static buffer palette"); 
+            return false; 
+        }
     }
-    
-    if (!foundLow) { logger.error("Battery LOW color missing from palette"); return false; }
-    if (!foundHigh) { logger.error("Battery HIGH color missing from palette"); return false; }
-    
-    // Check Solar color (Yellow)
-    var foundYellow = false;
-    for (var i = 0; i < palette.size(); i++) {
-        if (palette[i] == FaceLogic.COLOR_YELLOW) { foundYellow = true; }
-    }
-    if (!foundYellow) { logger.error("Solar color (YELLOW) missing from palette"); return false; }
 
     return true;
 }

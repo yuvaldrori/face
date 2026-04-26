@@ -167,7 +167,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     //
     // Shared logic for all static elements (Arcs, Icons, Labels)
     //
-    private function renderStatic(dc as $.Toybox.Graphics.Dc) as Void {
+    public function renderStatic(dc as $.Toybox.Graphics.Dc) as Void {
         dc.setColor(COLOR_BG, COLOR_BG);
         dc.clear();
         renderAllArcs(dc);
@@ -178,7 +178,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Shared logic for arc tracks and data fills
     //
     private function renderAllArcs(dc as $.Toybox.Graphics.Dc) as Void {
-        setAntiAliasSafe(dc, false);
         dc.setPenWidth(ARC_PEN_WIDTH);
 
         // 1. Static Tracks
