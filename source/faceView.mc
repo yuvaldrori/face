@@ -39,9 +39,10 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
     private var _lastHrStr as $.Toybox.Lang.String = FaceLogic.STR_DASHES;
     private var _lastTimeStr as $.Toybox.Lang.String = "";
-    private var _lastDateStr as $.Toybox.Lang.String = "";
     private var _lastCondStr as $.Toybox.Lang.String = "";
     private var _lastTempStr as $.Toybox.Lang.String = "";
+    private var _lastDateStr as $.Toybox.Lang.String = "";
+    private var _lastWakeStr as $.Toybox.Lang.String = "";
     private var _unknownStr as $.Toybox.Lang.String = FaceLogic.STR_EMPTY;
 
     // Layout Constants (Optimized for 260x260 MIP)
@@ -264,7 +265,9 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.setColor(mainColor, $.Toybox.Graphics.COLOR_TRANSPARENT);
 
         dc.drawText(CX, TOP_Y, FONT_TIME,  _lastTimeStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(CX, $.LayoutGenerated.DATE_Y, FONT_SMALL, _lastDateStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
+        
+        var subStr = (_isSleepMode && _lastWakeStr.length() > 0) ? _lastWakeStr : _lastDateStr;
+        dc.drawText(CX, $.LayoutGenerated.DATE_Y, FONT_SMALL, subStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
 
         if (!_isSleepMode) {
             // HR Group (Static Alignment)
@@ -372,6 +375,16 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         if (info.day != _lastDateDay) {
             _lastDateDay = info.day;
             _lastDateStr = FaceLogic.getDateString(info);
+        }
+
+        // Fetch Wake Time if in sleep mode
+        if (_isSleepMode) {
+            var profile = $.Toybox.UserProfile.getProfile();
+            if (profile has :upcomingWakeTime) {
+                _lastWakeStr = FaceLogic.getWakeTimeString(profile.upcomingWakeTime);
+            } else {
+                _lastWakeStr = FaceLogic.STR_EMPTY;
+            }
         }
 
         if ($.Toybox has :Weather) {

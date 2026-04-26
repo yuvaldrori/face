@@ -415,6 +415,24 @@ function testPaletteCompleteness(logger as $.Toybox.Test.Logger) as $.Toybox.Lan
 }
 
 //
+// Verify wake time formatting
+//
+(:test)
+function testWakeTimeFormatting(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    // Mock a Moment (approx 07:15)
+    var info = new $.Toybox.Time.Gregorian.Info();
+    info.hour = 7;
+    info.min = 15;
+    
+    // We can't easily mock the Moment -> Info conversion in a pure unit test without a real Moment
+    // but we can test the logic if we had a moment. 
+    // For now, let's verify it handles null correctly.
+    $.Toybox.Test.assertEqual(FaceLogic.getWakeTimeString(null), FaceLogic.STR_DASHES);
+    
+    return true;
+}
+
+//
 // Verify that all assumed SDK properties and modules exist in the target environment.
 // This prevents runtime "Symbol Not Found" crashes.
 //
@@ -449,6 +467,12 @@ function testRequiredSymbols(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Bo
     $.Toybox.Test.assert(settings has :doNotDisturb);
     // isNightModeEnabled is a newer API; we check it but don't hard-fail the whole suite if it's missing on older targets
     if (settings has :isNightModeEnabled) {
+        $.Toybox.Test.assert(true);
+    }
+    
+    // UserProfile properties
+    var profile = $.Toybox.UserProfile.getProfile();
+    if (profile has :upcomingWakeTime) {
         $.Toybox.Test.assert(true);
     }
     

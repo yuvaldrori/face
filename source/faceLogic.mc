@@ -51,6 +51,15 @@ module FaceLogic {
     }
 
     //
+    // Format wake time string (e.g. "Wake 07:00")
+    //
+    function getWakeTimeString(moment as $.Toybox.Time.Moment?) as $.Toybox.Lang.String {
+        if (moment == null) { return STR_DASHES; }
+        var info = $.Toybox.Time.Gregorian.info(moment, $.Toybox.Time.FORMAT_SHORT);
+        return $.Toybox.Lang.format("Wake $1$:$2$", [info.hour.toString(), info.min.format("%02d")]);
+    }
+
+    //
     // Format time string (HH:mm)
     //
     function getTimeString(hour as $.Toybox.Lang.Number, min as $.Toybox.Lang.Number) as $.Toybox.Lang.String {
