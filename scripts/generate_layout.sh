@@ -8,33 +8,35 @@ MC_OUT="source/layoutGenerated.mc"
 CX=$(awk "BEGIN { print int($WIDTH / 2) }")
 CY=$(awk "BEGIN { print int($HEIGHT / 2) }")
 
-# Ring Configuration (Three heavy touching rings)
+# Ring Configuration (Three heavy touching rings, moved in by 4px)
+RING_MARGIN=4
 RING_WIDTH=18
-# Ring 1: Outer (Solar) - covers 130 to 112
-RING_SOLAR_R=$(awk "BEGIN { print int(130 - ($RING_WIDTH / 2)) }")
-# Ring 2: Middle (Steps) - covers 112 to 94
-RING_STEPS_R=$(awk "BEGIN { print int(130 - $RING_WIDTH - ($RING_WIDTH / 2)) }")
-# Ring 3: Inner (Battery) - covers 94 to 76
-RING_BATT_R=$(awk "BEGIN { print int(130 - (2 * $RING_WIDTH) - ($RING_WIDTH / 2)) }")
+# Ring 1: Outer (Solar) - ends at 130 - 4 = 126
+RING_SOLAR_R=$(awk "BEGIN { print int(130 - $RING_MARGIN - ($RING_WIDTH / 2)) }")
+# Ring 2: Middle (Steps)
+RING_STEPS_R=$(awk "BEGIN { print int($RING_SOLAR_R - $RING_WIDTH) }")
+# Ring 3: Inner (Battery)
+RING_BATT_R=$(awk "BEGIN { print int($RING_STEPS_R - $RING_WIDTH) }")
 
-# Custom Huge Digit Geometry (Defined as Line Segments [x1, y1, x2, y2])
-# Each digit is defined in a 100x150 unit space
-SCALE=1.1
-S_W=$(awk "BEGIN { print 100 * $SCALE }")
+# Custom Huge Digit Geometry (Line Segments)
+# Scaled to be huge (approx 180px tall)
+# Digits will overlap slightly for a "stenciled" look
+SCALE=1.2
+S_W=$(awk "BEGIN { print 70 * $SCALE }")
 S_H=$(awk "BEGIN { print 150 * $SCALE }")
 
-# X positions for 4 digits (HH:mm)
-GAP=8
+# X positions for 4 digits (HH:mm) - tighter gap to keep them centered
+GAP=2
 T1_X=$(awk "BEGIN { print int($CX - ($S_W * 2) - ($GAP * 1.5)) }")
 T2_X=$(awk "BEGIN { print int($CX - $S_W - ($GAP * 0.5)) }")
 T3_X=$(awk "BEGIN { print int($CX + ($GAP * 0.5)) }")
 T4_X=$(awk "BEGIN { print int($CX + $S_W + ($GAP * 1.5)) }")
 Y_TIME=$(awk "BEGIN { print int($CY - ($S_H / 2)) }")
 
-# HR Positioning (Below Time)
-Y_HR=$(awk "BEGIN { print int($Y_TIME + $S_H - 10) }")
+# HR Positioning (Below center of digits)
+Y_HR=$(awk "BEGIN { print int($CY + 40) }")
 
-# Digit Lines (Segments for digits 0-9)
+# Digit Lines (Simplified segments for 100x150 space)
 D0="[[0,0,100,0],[100,0,100,150],[100,150,0,150],[0,150,0,0]]"
 D1="[[100,0,100,150]]"
 D2="[[0,0,100,0],[100,0,100,75],[100,75,0,75],[0,75,0,150],[0,150,100,150]]"
@@ -47,19 +49,32 @@ D8="[[0,0,100,0],[100,0,100,150],[100,150,0,150],[0,150,0,0],[0,75,100,75]]"
 D9="[[100,150,100,0],[100,0,0,0],[0,0,0,75],[0,75,100,75]]"
 
 scale_lines() {
-    python3 -c "import re; p='$1'; s=$SCALE; print(re.sub(r'(\d+)', lambda m: str(int(int(m.group(1)) * s)), p))"
+    python3 -c "import re; p='$1'; s=$SCALE; w_s=0.7; print(re.sub(r'(\d+)', lambda m: str(int(int(m.group(1)) * (s if int(m.group(0)) > 100 or '150' in p else w_s*s))), p))"
+}
+# Actually let's use a simpler scaler for width and height specifically
+scale_lines_fixed() {
+    python3 -c "
+import json
+poly = json.loads('$1')
+scale_x = $SCALE * 0.7
+scale_y = $SCALE
+res = []
+for line in poly:
+    res.append([int(line[0]*scale_x), int(line[1]*scale_y), int(line[2]*scale_x), int(line[3]*scale_y)])
+print(json.dumps(res))
+"
 }
 
-SD0=$(scale_lines "$D0")
-SD1=$(scale_lines "$D1")
-SD2=$(scale_lines "$D2")
-SD3=$(scale_lines "$D3")
-SD4=$(scale_lines "$D4")
-SD5=$(scale_lines "$D5")
-SD6=$(scale_lines "$D6")
-SD7=$(scale_lines "$D7")
-SD8=$(scale_lines "$D8")
-SD9=$(scale_lines "$D9")
+SD0=$(scale_lines_fixed "$D0")
+SD1=$(scale_lines_fixed "$D1")
+SD2=$(scale_lines_fixed "$D2")
+SD3=$(scale_lines_fixed "$D3")
+SD4=$(scale_lines_fixed "$D4")
+SD5=$(scale_lines_fixed "$D5")
+SD6=$(scale_lines_fixed "$D6")
+SD7=$(scale_lines_fixed "$D7")
+SD8=$(scale_lines_fixed "$D8")
+SD9=$(scale_lines_fixed "$D9")
 
 # HR Layout
 HR_ICON_W=24
@@ -101,7 +116,7 @@ module LayoutGenerated {
     const T2_X = $T2_X;
     const T3_X = $T3_X;
     const T4_X = $T4_X;
-    const DIGIT_W = $(awk "BEGIN { print int($S_W) }");
+    const DIGIT_W = $(awk "BEGIN { print int($S_W * 0.7) }");
     const DIGIT_H = $(awk "BEGIN { print int($S_H) }");
 
     const Y_HR = $Y_HR;

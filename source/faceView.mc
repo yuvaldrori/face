@@ -193,7 +193,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         var m1 = _min / 10;
         var m2 = _min % 10;
 
-        dc.setPenWidth(16); // Bold digits
+        dc.setPenWidth(24); // Extreme bold digits
         drawDigit(dc, $.LayoutGenerated.T1_X, Y_TIME, h1);
         drawDigit(dc, $.LayoutGenerated.T2_X, Y_TIME, h2);
         drawDigit(dc, $.LayoutGenerated.T3_X, Y_TIME, m1);
