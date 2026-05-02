@@ -18,63 +18,76 @@ RING_STEPS_R=$(awk "BEGIN { print int($RING_SOLAR_R - $RING_WIDTH) }")
 # Ring 3: Inner (Battery)
 RING_BATT_R=$(awk "BEGIN { print int($RING_STEPS_R - $RING_WIDTH) }")
 
-# Custom Huge Digit Geometry (Line Segments)
-# Scaled to be huge (approx 180px tall)
-# Digits will overlap slightly for a "stenciled" look
-SCALE=1.2
-S_W=$(awk "BEGIN { print 70 * $SCALE }")
-S_H=$(awk "BEGIN { print 150 * $SCALE }")
+# Custom Huge Digit Geometry (Block Rectangles [x, y, w, h])
+# Each digit is defined in a 100x150 unit space
+# We will draw them with fillRectangle
+SCALE_X=0.9
+SCALE_Y=1.3
+S_W=$(awk "BEGIN { print 70 * $SCALE_X }")
+S_H=$(awk "BEGIN { print 150 * $SCALE_Y }")
 
-# X positions for 4 digits (HH:mm) - tighter gap to keep them centered
-GAP=2
+# X positions for 4 digits (HH:mm)
+GAP=6
 T1_X=$(awk "BEGIN { print int($CX - ($S_W * 2) - ($GAP * 1.5)) }")
 T2_X=$(awk "BEGIN { print int($CX - $S_W - ($GAP * 0.5)) }")
 T3_X=$(awk "BEGIN { print int($CX + ($GAP * 0.5)) }")
 T4_X=$(awk "BEGIN { print int($CX + $S_W + ($GAP * 1.5)) }")
 Y_TIME=$(awk "BEGIN { print int($CY - ($S_H / 2)) }")
 
-# HR Positioning (Below center of digits)
-Y_HR=$(awk "BEGIN { print int($CY + 40) }")
+# HR Positioning (Below center)
+Y_HR=$(awk "BEGIN { print int($CY + 50) }")
 
-# Digit Lines (Simplified segments for 100x150 space)
-D0="[[0,0,100,0],[100,0,100,150],[100,150,0,150],[0,150,0,0]]"
-D1="[[100,0,100,150]]"
-D2="[[0,0,100,0],[100,0,100,75],[100,75,0,75],[0,75,0,150],[0,150,100,150]]"
-D3="[[0,0,100,0],[100,0,100,150],[100,150,0,150],[0,75,100,75]]"
-D4="[[0,0,0,75],[0,75,100,75],[100,0,100,150]]"
-D5="[[100,0,0,0],[0,0,0,75],[0,75,100,75],[100,75,100,150],[100,150,0,150]]"
-D6="[[100,0,0,0],[0,0,0,150],[0,150,100,150],[100,150,100,75],[100,75,0,75]]"
-D7="[[0,0,100,0],[100,0,100,150]]"
-D8="[[0,0,100,0],[100,0,100,150],[100,150,0,150],[0,150,0,0],[0,75,100,75]]"
-D9="[[100,150,100,0],[100,0,0,0],[0,0,0,75],[0,75,100,75]]"
+# Digit Blocks (x, y, w, h) - 100x150 space
+# Bar width is 30 units
+BW=30
+H_BW=15 # Half bar width
+D_W=100
+D_H=150
 
-scale_lines() {
-    python3 -c "import re; p='$1'; s=$SCALE; w_s=0.7; print(re.sub(r'(\d+)', lambda m: str(int(int(m.group(1)) * (s if int(m.group(0)) > 100 or '150' in p else w_s*s))), p))"
-}
-# Actually let's use a simpler scaler for width and height specifically
-scale_lines_fixed() {
+# Digit 0: Left, Right, Top, Bottom bars
+D0="[[0,0,30,150],[70,0,30,150],[30,0,40,30],[30,120,40,30]]"
+# Digit 1: One thick bar
+D1="[[35,0,40,150]]"
+# Digit 2: Top, Mid, Bot, Top-Right, Bot-Left
+D2="[[0,0,100,30],[0,60,100,30],[0,120,100,30],[70,30,30,30],[0,90,30,30]]"
+# Digit 3: Top, Mid, Bot, Right bar
+D3="[[0,0,100,30],[0,60,100,30],[0,120,100,30],[70,0,30,150]]"
+# Digit 4: Left-Top, Right, Mid
+D4="[[0,0,30,90],[70,0,30,150],[30,60,40,30]]"
+# Digit 5: Top, Mid, Bot, Top-Left, Bot-Right
+D5="[[0,0,100,30],[0,60,100,30],[0,120,100,30],[0,30,30,30],[70,90,30,30]]"
+# Digit 6: Left, Top, Mid, Bot, Bot-Right
+D6="[[0,0,30,150],[30,0,70,30],[30,60,70,30],[30,120,70,30],[70,90,30,30]]"
+# Digit 7: Top, Right
+D7="[[0,0,100,30],[70,30,30,120]]"
+# Digit 8: Left, Right, Top, Mid, Bot
+D8="[[0,0,30,150],[70,0,30,150],[30,0,40,30],[30,60,40,30],[30,120,40,30]]"
+# Digit 9: Right, Top, Mid, Left-Top
+D9="[[70,0,30,150],[0,0,70,30],[0,60,70,30],[0,30,30,30]]"
+
+scale_blocks() {
     python3 -c "
 import json
-poly = json.loads('$1')
-scale_x = $SCALE * 0.7
-scale_y = $SCALE
+blocks = json.loads('$1')
+sx = $SCALE_X
+sy = $SCALE_Y
 res = []
-for line in poly:
-    res.append([int(line[0]*scale_x), int(line[1]*scale_y), int(line[2]*scale_x), int(line[3]*scale_y)])
+for b in blocks:
+    res.append([int(b[0]*sx), int(b[1]*sy), int(b[2]*sx), int(b[3]*sy)])
 print(json.dumps(res))
 "
 }
 
-SD0=$(scale_lines_fixed "$D0")
-SD1=$(scale_lines_fixed "$D1")
-SD2=$(scale_lines_fixed "$D2")
-SD3=$(scale_lines_fixed "$D3")
-SD4=$(scale_lines_fixed "$D4")
-SD5=$(scale_lines_fixed "$D5")
-SD6=$(scale_lines_fixed "$D6")
-SD7=$(scale_lines_fixed "$D7")
-SD8=$(scale_lines_fixed "$D8")
-SD9=$(scale_lines_fixed "$D9")
+SD0=$(scale_blocks "$D0")
+SD1=$(scale_blocks "$D1")
+SD2=$(scale_blocks "$D2")
+SD3=$(scale_blocks "$D3")
+SD4=$(scale_blocks "$D4")
+SD5=$(scale_blocks "$D5")
+SD6=$(scale_blocks "$D6")
+SD7=$(scale_blocks "$D7")
+SD8=$(scale_blocks "$D8")
+SD9=$(scale_blocks "$D9")
 
 # HR Layout
 HR_ICON_W=24
@@ -116,8 +129,6 @@ module LayoutGenerated {
     const T2_X = $T2_X;
     const T3_X = $T3_X;
     const T4_X = $T4_X;
-    const DIGIT_W = $(awk "BEGIN { print int($S_W * 0.7) }");
-    const DIGIT_H = $(awk "BEGIN { print int($S_H) }");
 
     const Y_HR = $Y_HR;
     const HR_X = $HR_X;

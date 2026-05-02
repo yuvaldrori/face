@@ -11,4 +11,4 @@ bin/*.prg
 bin/*.debug.xml
 
 # UI Artifacts
-*.png
+# *.png

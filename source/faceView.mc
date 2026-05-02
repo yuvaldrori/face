@@ -187,20 +187,18 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         var mainColor = _isSleepMode ? FaceLogic.COLOR_DK_GRAY : COLOR_MAIN;
         dc.setColor(mainColor, $.Toybox.Graphics.COLOR_TRANSPARENT);
 
-        // Huge Vector Time
+        // Huge Block Time
         var h1 = _hour / 10;
         var h2 = _hour % 10;
         var m1 = _min / 10;
         var m2 = _min % 10;
 
-        dc.setPenWidth(24); // Extreme bold digits
         drawDigit(dc, $.LayoutGenerated.T1_X, Y_TIME, h1);
         drawDigit(dc, $.LayoutGenerated.T2_X, Y_TIME, h2);
         drawDigit(dc, $.LayoutGenerated.T3_X, Y_TIME, m1);
         drawDigit(dc, $.LayoutGenerated.T4_X, Y_TIME, m2);
         
         if (!_isSleepMode) {
-            dc.setPenWidth(1); // Reset for heart
             drawHeartIcon(dc, COLOR_HEART);
             dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
             dc.drawText($.LayoutGenerated.HR_TEXT_X, Y_HR, FONT_SMALL, _lastHrStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
@@ -210,10 +208,10 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     }
 
     private function drawDigit(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, digit as Number) as Void {
-        var segments = $.LayoutGenerated.DIGITS[digit] as Array<Array<Number>>;
-        for (var i = 0; i < segments.size(); i++) {
-            var s = segments[i];
-            dc.drawLine(x + s[0], y + s[1], x + s[2], y + s[3]);
+        var blocks = $.LayoutGenerated.DIGITS[digit] as Array<Array<Number>>;
+        for (var i = 0; i < blocks.size(); i++) {
+            var b = blocks[i];
+            dc.fillRectangle(x + b[0], y + b[1], b[2], b[3]);
         }
     }
 
