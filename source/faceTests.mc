@@ -60,9 +60,10 @@ class MockDc extends $.Toybox.Lang.Object {
 (:test)
 function testLayoutBoundaries(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     $.Toybox.Test.assert($.LayoutGenerated.CX == 130);
-    $.Toybox.Test.assert($.LayoutGenerated.RING_WIDTH == 14);
+    $.Toybox.Test.assert($.LayoutGenerated.RING_WIDTH == 18);
     $.Toybox.Test.assert($.LayoutGenerated.RING_SOLAR_R <= 130);
-    $.Toybox.Test.assert($.LayoutGenerated.RING_BATT_R > 60);
+    // Outer R=121, Middle R=103, Inner R=85.
+    $.Toybox.Test.assert($.LayoutGenerated.RING_BATT_R > 40);
     
     return true;
 }

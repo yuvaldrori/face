@@ -9,7 +9,6 @@ import Toybox.System;
 import Toybox.WatchUi;
 import Toybox.Time;
 import Toybox.Time.Gregorian;
-import Toybox.Weather;
 import Toybox.Activity;
 
 class FaceView extends $.Toybox.WatchUi.WatchFace {
@@ -26,14 +25,14 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     
     private var _lastHrValue as $.Toybox.Lang.Number = -1;
     private var _lastHrStr as $.Toybox.Lang.String = FaceLogic.STR_DASHES;
-    private var _lastTimeStr as $.Toybox.Lang.String = "";
+    private var _hour as $.Toybox.Lang.Number = 0;
+    private var _min as $.Toybox.Lang.Number = 0;
 
     // Layout Constants (Optimized for 260x260 MIP)
     private const CX = $.LayoutGenerated.CX; 
     private const CY = $.LayoutGenerated.CY;
     
     private const FONT_SMALL = $.Toybox.Graphics.FONT_SMALL;
-    private const FONT_TIME = $.Toybox.Graphics.FONT_NUMBER_THAI_HOT;
     private const COLOR_MAIN as $.Toybox.Graphics.ColorValue = FaceLogic.COLOR_WHITE;
     private const COLOR_BG as $.Toybox.Graphics.ColorValue = FaceLogic.COLOR_BLACK;
     private const COLOR_HEART as $.Toybox.Graphics.ColorValue = FaceLogic.COLOR_RED;
@@ -169,7 +168,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.setColor(FaceLogic.COLOR_DK_GRAY, COLOR_BG);
         FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_STEPS_R, Graphics.ARC_COUNTER_CLOCKWISE, 0, 360);
         if (_stepRatio > 0) {
-            dc.setColor(FaceLogic.getStepColor(), COLOR_BG);
+            dc.setColor(0x00FFFF, COLOR_BG); // Cyan for Steps
             FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_STEPS_R, Graphics.ARC_COUNTER_CLOCKWISE, 90, (90 + (360 * _stepRatio)).toNumber());
         }
 
@@ -188,16 +187,34 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         var mainColor = _isSleepMode ? FaceLogic.COLOR_DK_GRAY : COLOR_MAIN;
         dc.setColor(mainColor, $.Toybox.Graphics.COLOR_TRANSPARENT);
 
-        // Huge Time
-        dc.drawText(CX, Y_TIME, FONT_TIME, _lastTimeStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
+        // Huge Vector Time
+        var h1 = _hour / 10;
+        var h2 = _hour % 10;
+        var m1 = _min / 10;
+        var m2 = _min % 10;
+
+        dc.setPenWidth(16); // Bold digits
+        drawDigit(dc, $.LayoutGenerated.T1_X, Y_TIME, h1);
+        drawDigit(dc, $.LayoutGenerated.T2_X, Y_TIME, h2);
+        drawDigit(dc, $.LayoutGenerated.T3_X, Y_TIME, m1);
+        drawDigit(dc, $.LayoutGenerated.T4_X, Y_TIME, m2);
         
         if (!_isSleepMode) {
+            dc.setPenWidth(1); // Reset for heart
             drawHeartIcon(dc, COLOR_HEART);
             dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
             dc.drawText($.LayoutGenerated.HR_TEXT_X, Y_HR, FONT_SMALL, _lastHrStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
         }
 
         setAntiAliasSafe(dc, false);
+    }
+
+    private function drawDigit(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, digit as Number) as Void {
+        var segments = $.LayoutGenerated.DIGITS[digit] as Array<Array<Number>>;
+        for (var i = 0; i < segments.size(); i++) {
+            var s = segments[i];
+            dc.drawLine(x + s[0], y + s[1], x + s[2], y + s[3]);
+        }
     }
 
     private function drawDebugOverlay(dc as $.Toybox.Graphics.Dc) as Void {
@@ -229,7 +246,8 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
     private function updateLongTermData(clockTime as $.Toybox.System.ClockTime, dc as $.Toybox.Graphics.Dc) as Void {
         updateSystemStats();
-        _lastTimeStr = FaceLogic.getTimeString(clockTime.hour as $.Toybox.Lang.Number, clockTime.min as $.Toybox.Lang.Number);
+        _hour = clockTime.hour as $.Toybox.Lang.Number;
+        _min = clockTime.min as $.Toybox.Lang.Number;
     }
 
     public function updateSystemStats() as Void {
