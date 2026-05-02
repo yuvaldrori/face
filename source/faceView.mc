@@ -17,66 +17,41 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Lifecycle and state tracking
     private var _lastUpdateMinute as $.Toybox.Lang.Number = -1;
     private var _hasAntiAlias as $.Toybox.Lang.Boolean = false;
-    private var _solarIntensity as $.Toybox.Lang.Number = 0;
     private var _batteryLevel as $.Toybox.Lang.Float = 0.0;
     private var _batteryRatio as $.Toybox.Lang.Float = 0.0;
+    private var _solarRatio as $.Toybox.Lang.Float = 0.0;
+    private var _stepRatio as $.Toybox.Lang.Float = 0.0;
     private var _isLowPower as $.Toybox.Lang.Boolean = true;
     public var _isSleepMode as $.Toybox.Lang.Boolean = false;
     
-    // Value tracking for dirty-rect and change detection
     private var _lastHrValue as $.Toybox.Lang.Number = -1;
-    private var _lastWeatherCondition as $.Toybox.Lang.Integer = -1;
-    private var _lastTempValue as $.Toybox.Lang.Number? = null;
-    private var _lastBattLevel as $.Toybox.Lang.Float = -1.0;
-    private var _lastSolarValue as $.Toybox.Lang.Number = -1;
-    private var _lastDateDay as $.Toybox.Lang.Number = -1;
-    private var _solarRatio as $.Toybox.Lang.Float = 0.0;
-
-    // Cached Layout and String Values
-    private var _condLine1 as $.Toybox.Lang.String = "";
-    private var _condLine2 as $.Toybox.Lang.String = "";
-    private var _isCondWrapped as $.Toybox.Lang.Boolean = false;
-
     private var _lastHrStr as $.Toybox.Lang.String = FaceLogic.STR_DASHES;
     private var _lastTimeStr as $.Toybox.Lang.String = "";
-    private var _lastCondStr as $.Toybox.Lang.String = "";
-    private var _lastTempStr as $.Toybox.Lang.String = "";
-    public var _lastDateStr as $.Toybox.Lang.String = "";
-    public var _lastWakeStr as $.Toybox.Lang.String = "";
-    private var _unknownStr as $.Toybox.Lang.String = FaceLogic.STR_EMPTY;
 
     // Layout Constants (Optimized for 260x260 MIP)
     private const CX = $.LayoutGenerated.CX; 
-    private const TOP_Y = $.LayoutGenerated.TOP_Y;
-    private const ARC_RADIUS = $.LayoutGenerated.ARC_RADIUS;
+    private const CY = $.LayoutGenerated.CY;
     
     private const FONT_SMALL = $.Toybox.Graphics.FONT_SMALL;
     private const FONT_TIME = $.Toybox.Graphics.FONT_NUMBER_THAI_HOT;
     private const COLOR_MAIN as $.Toybox.Graphics.ColorValue = FaceLogic.COLOR_WHITE;
     private const COLOR_BG as $.Toybox.Graphics.ColorValue = FaceLogic.COLOR_BLACK;
     private const COLOR_HEART as $.Toybox.Graphics.ColorValue = FaceLogic.COLOR_RED;
-    private const COLOR_GLYPH as $.Toybox.Graphics.ColorValue = FaceLogic.COLOR_LT_GRAY;
 
+    private const Y_TIME = $.LayoutGenerated.Y_TIME;
     private const Y_HR = $.LayoutGenerated.Y_HR;
     
-    private const Y_COND = $.LayoutGenerated.Y_COND; 
-    private const Y_TEMP = $.LayoutGenerated.Y_TEMP; 
-
-    private const ARC_PEN_WIDTH = $.LayoutGenerated.ARC_PEN_WIDTH;
-    private const MAX_TEXT_WIDTH = $.LayoutGenerated.MAX_TEXT_WIDTH;
+    private const RING_WIDTH = $.LayoutGenerated.RING_WIDTH;
     
     private const BATT_THRESHOLD_LOW = 20.0;
 
-    // Static Background Buffer (Track arcs, icons, and labels)
+    // Static Background Buffer (Track arcs)
     private var _staticBuffer as $.Toybox.Graphics.BufferedBitmapReference? = null;
     private var _lastBufferMinute as $.Toybox.Lang.Number = -1;
-    private var _timeH as $.Toybox.Lang.Number = 0;
-    private var _dateH as $.Toybox.Lang.Number = 0;
 
     function initialize() {
         WatchFace.initialize();
         _hasAntiAlias = ($.Toybox.Graphics has :setAntiAlias);
-        _unknownStr = $.Toybox.WatchUi.loadResource($.Rez.Strings.weather_gen_condition_unknown) as String;
         _lastHrStr = FaceLogic.STR_DASHES;
     }
 
@@ -93,9 +68,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Set up UI component dimensions and initial data
     //
     function onLayout(dc as $.Toybox.Graphics.Dc) as Void {
-        _timeH = dc.getFontHeight(FONT_TIME);
-        _dateH = dc.getFontHeight(FONT_SMALL);
-        
         initializeStaticBuffer();
         var clockTime = $.Toybox.System.getClockTime();
         updateLongTermData(clockTime, dc);
@@ -108,7 +80,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private function initializeStaticBuffer() as Void {
         if (_staticBuffer != null && _staticBuffer.get() != null) { return; }
         if ($.Toybox.Graphics has :createBufferedBitmap) {
-            // 4-bit palette (16 colors) for maximum efficiency on MIP
             _staticBuffer = $.Toybox.Graphics.createBufferedBitmap({
                 :width => $.LayoutGenerated.WIDTH,
                 :height => $.LayoutGenerated.HEIGHT,
@@ -121,44 +92,35 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Main Rendering Loop (1Hz Update)
     //
     function onUpdate(dc as $.Toybox.Graphics.Dc) as Void {
-        setAntiAliasSafe(dc, false); // AA Shield: Reset state before any buffer operations
+        setAntiAliasSafe(dc, false);
         dc.clearClip();
         
         var settings = $.Toybox.System.getDeviceSettings();
         var inSleep = false;
-        
-        // 1. Check Do Not Disturb (Strongest indicator for scheduled sleep)
         if (settings has :doNotDisturb && settings.doNotDisturb) { inSleep = true; }
-        
-        // 2. Check Night Mode (Specific to display/lighting settings)
         if (!inSleep && settings has :isNightModeEnabled && settings.isNightModeEnabled) { inSleep = true; }
 
         if (inSleep != _isSleepMode) {
             _isSleepMode = inSleep;
-            _lastUpdateMinute = -1; // Force full buffer redraw on sleep state change
+            _lastUpdateMinute = -1;
         }
 
         var clockTime = $.Toybox.System.getClockTime();
         var isFullUpdate = FaceLogic.needsFullUpdate(_lastUpdateMinute, clockTime.min);
 
-        // 1. Data Refresh (Smart Polling)
-        if (!_isLowPower) { 
-            updateHeartRate(); 
-        }
+        if (!_isLowPower) { updateHeartRate(); }
 
         if (isFullUpdate) {
             _lastUpdateMinute = clockTime.min;
             updateLongTermData(clockTime, dc);
-            if (_isLowPower) { updateHeartRate(); } // Only poll once per minute in sleep
+            if (_isLowPower) { updateHeartRate(); }
         }
 
-        // 2. Buffer Management (Redraw static elements if minute changed or buffer purged)
         if (isFullUpdate || _staticBuffer == null || _lastBufferMinute != clockTime.min) {
             updateStaticBuffer();
             _lastBufferMinute = clockTime.min;
         }
 
-        // 3. Hardware-Accelerated Redraw (Blit buffer to screen)
         var bufferRef = _staticBuffer;
         var buffer = (bufferRef != null) ? bufferRef.get() : null;
         if (buffer instanceof $.Toybox.Graphics.BufferedBitmap) {
@@ -167,178 +129,84 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
             renderStatic(dc);
         }
 
-        // 4. Render Dynamic Text (High-Visibility Overlay)
         renderDynamicUI(dc);
-
         if ($.DEBUG_ALIGNMENT) { drawDebugOverlay(dc); }
     }
 
-    //
-    // Determine battery color based on remaining percentage
-    //
     public function getBatteryColor(level as $.Toybox.Lang.Float) as $.Toybox.Graphics.ColorValue {
         return (level <= BATT_THRESHOLD_LOW) ? COLOR_HEART : FaceLogic.COLOR_GREEN;
     }
 
-    //
-    // Render persistent UI elements into the background buffer
-    //
     private function updateStaticBuffer() as Void {
         var bufferRef = _staticBuffer;
         if (bufferRef == null) { return; }
         var buffer = bufferRef.get();
         if (!(buffer instanceof $.Toybox.Graphics.BufferedBitmap)) { return; }
-
         renderStatic(buffer.getDc());
     }
 
-    //
-    // Shared logic for all static elements (Arcs, Icons, Labels)
-    //
     public function renderStatic(dc as $.Toybox.Graphics.Dc) as Void {
         dc.setColor(COLOR_BG, COLOR_BG);
         dc.clear();
         
         if (!_isSleepMode) {
-            renderAllArcs(dc);
-            drawStaticIcons(dc);
+            renderAllRings(dc);
         }
     }
 
-    //
-    // Shared logic for arc tracks and data fills
-    //
-    private function renderAllArcs(dc as $.Toybox.Graphics.Dc) as Void {
-        dc.setPenWidth(ARC_PEN_WIDTH);
+    private function renderAllRings(dc as $.Toybox.Graphics.Dc) as Void {
+        dc.setPenWidth(RING_WIDTH);
 
-        // 1. Static Tracks
+        // 1. Solar Ring (Outer)
         dc.setColor(FaceLogic.COLOR_DK_GRAY, COLOR_BG);
-        FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.BATT_TRACK_START, $.LayoutGenerated.BATT_TRACK_END);
-        FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, $.LayoutGenerated.SOLAR_TRACK_END);
-
-        // 2. Data Fills
-        dc.setColor(getBatteryColor(_batteryLevel), COLOR_BG);
-        var battFillAngle = _batteryRatio * $.LayoutGenerated.DATA_ARC_SPAN;
-        if (battFillAngle > 0) {
-            FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_CLOCKWISE, $.LayoutGenerated.BATT_START, ($.LayoutGenerated.BATT_START - battFillAngle).toNumber());
-        }
-
+        FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_SOLAR_R, Graphics.ARC_COUNTER_CLOCKWISE, 0, 360);
         if (_solarRatio > 0) {
             dc.setColor(FaceLogic.COLOR_YELLOW, COLOR_BG);
-            var solarFillAngle = _solarRatio * $.LayoutGenerated.DATA_ARC_SPAN;
-            FaceLogic.drawSafeArc(dc, CX, CX, ARC_RADIUS, Graphics.ARC_COUNTER_CLOCKWISE, $.LayoutGenerated.SOLAR_TRACK_START, ($.LayoutGenerated.SOLAR_TRACK_START + solarFillAngle).toNumber());
+            FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_SOLAR_R, Graphics.ARC_COUNTER_CLOCKWISE, 90, (90 + (360 * _solarRatio)).toNumber());
+        }
+
+        // 2. Steps Ring (Middle)
+        dc.setColor(FaceLogic.COLOR_DK_GRAY, COLOR_BG);
+        FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_STEPS_R, Graphics.ARC_COUNTER_CLOCKWISE, 0, 360);
+        if (_stepRatio > 0) {
+            dc.setColor(FaceLogic.getStepColor(), COLOR_BG);
+            FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_STEPS_R, Graphics.ARC_COUNTER_CLOCKWISE, 90, (90 + (360 * _stepRatio)).toNumber());
+        }
+
+        // 3. Battery Ring (Inner)
+        dc.setColor(FaceLogic.COLOR_DK_GRAY, COLOR_BG);
+        FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_BATT_R, Graphics.ARC_COUNTER_CLOCKWISE, 0, 360);
+        if (_batteryRatio > 0) {
+            dc.setColor(getBatteryColor(_batteryLevel), COLOR_BG);
+            FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_BATT_R, Graphics.ARC_COUNTER_CLOCKWISE, 90, (90 + (360 * _batteryRatio)).toNumber());
         }
     }
 
-    //
-    // Draw shared glyphs (Battery and Solar)
-    //
-    private function drawStaticIcons(dc as $.Toybox.Graphics.Dc) as Void {
-        dc.setPenWidth($.LayoutGenerated.PEN_WIDTH_GLYPH);
-        dc.setColor(COLOR_GLYPH, COLOR_BG);
-        dc.drawRectangle($.LayoutGenerated.BATT_RECT_X, $.LayoutGenerated.BATT_RECT_Y, $.LayoutGenerated.BATT_W, $.LayoutGenerated.BATT_H);
-        dc.fillRectangle($.LayoutGenerated.BATT_TIP_RECT_X, $.LayoutGenerated.BATT_TIP_RECT_Y, $.LayoutGenerated.BATT_TIP_W, $.LayoutGenerated.BATT_TIP_H); 
-        
-        dc.setColor(getBatteryColor(_batteryLevel), COLOR_BG);
-        var fillH = ($.LayoutGenerated.BATT_FILL_MAX_H * _batteryRatio).toNumber();
-        if (fillH > 0) { 
-            dc.fillRectangle($.LayoutGenerated.BATT_FILL_X, $.LayoutGenerated.BATT_FILL_Y_BASE - fillH, $.LayoutGenerated.BATT_FILL_W, fillH); 
-        }
-
-        var sx = $.LayoutGenerated.SX; var sy = $.LayoutGenerated.SY;
-        dc.setColor(FaceLogic.COLOR_YELLOW, COLOR_BG);
-        dc.fillCircle(sx, sy, $.LayoutGenerated.SUN_R);
-        var rays = $.LayoutGenerated.SOLAR_RAYS;
-        for (var i = 0; i < rays.size(); i++) {
-            var r = rays[i];
-            dc.drawLine(sx + r[0], sy + r[1], sx + r[2], sy + r[3]);
-        }
-    }
-
-    //
-    // Render real-time text (Clock, HR, Weather) directly to the screen
-    //
     public function renderDynamicUI(dc as $.Toybox.Graphics.Dc) as Void {
         setAntiAliasSafe(dc, true);
         
         var mainColor = _isSleepMode ? FaceLogic.COLOR_DK_GRAY : COLOR_MAIN;
         dc.setColor(mainColor, $.Toybox.Graphics.COLOR_TRANSPARENT);
 
-        dc.drawText(CX, TOP_Y, FONT_TIME,  _lastTimeStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
+        // Huge Time
+        dc.drawText(CX, Y_TIME, FONT_TIME, _lastTimeStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
         
-        var subStr = (_isSleepMode && _lastWakeStr.length() > 0) ? _lastWakeStr : _lastDateStr;
-        dc.drawText(CX, $.LayoutGenerated.DATE_Y, FONT_SMALL, subStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
-
         if (!_isSleepMode) {
-            // HR Group (Static Alignment)
             drawHeartIcon(dc, COLOR_HEART);
             dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
             dc.drawText($.LayoutGenerated.HR_TEXT_X, Y_HR, FONT_SMALL, _lastHrStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
-
-            // Weather Group (Semi-Static)
-            if (_isCondWrapped) {
-                dc.drawText(CX, Y_COND - $.LayoutGenerated.COND_WRAP_V_OFFSET, FONT_SMALL, _condLine1, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(CX, Y_COND, FONT_SMALL, _condLine2, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
-            } else {
-                dc.drawText(CX, Y_COND, FONT_SMALL, _lastCondStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
-            }
-            dc.drawText(CX, Y_TEMP, FONT_SMALL, _lastTempStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
         }
 
         setAntiAliasSafe(dc, false);
     }
 
-    //
-    // Debug helper to verify geometric alignment
-    //
     private function drawDebugOverlay(dc as $.Toybox.Graphics.Dc) as Void {
         setAntiAliasSafe(dc, false);
-        dc.setPenWidth($.LayoutGenerated.PEN_WIDTH_DEBUG);
-        
-        // 1. Full Alignment Grid
-        dc.setColor(FaceLogic.COLOR_WHITE, COLOR_BG);
-        dc.drawCircle(CX, CX, $.LayoutGenerated.SCREEN_RADIUS); // Screen Edge
-
         dc.setColor(FaceLogic.COLOR_RED, COLOR_BG);
-        dc.drawLine(CX, 0, CX, $.LayoutGenerated.HEIGHT); dc.drawLine(0, CX, $.LayoutGenerated.WIDTH, CX); // Crosshair
-        
-        dc.setColor(FaceLogic.COLOR_YELLOW, COLOR_BG);
-        dc.drawLine(0, TOP_Y, $.LayoutGenerated.WIDTH, TOP_Y); // Arc Limit
-        
-        dc.setColor(FaceLogic.COLOR_GREEN, COLOR_BG);
-        
-        // 2. Data Bounding Boxes
-        var timeW = dc.getTextWidthInPixels(_lastTimeStr, FONT_TIME);
-        dc.drawRectangle(CX - (timeW / 2), TOP_Y, timeW, _timeH);
-        
-        var dateW = dc.getTextWidthInPixels(_lastDateStr, FONT_SMALL);
-        dc.drawRectangle(CX - (dateW / 2), $.LayoutGenerated.DATE_Y, dateW, _dateH);
-
-        // Heart Rate
-        var hrTextW = dc.getTextWidthInPixels(_lastHrStr, FONT_SMALL);
-        var totalHrW = $.LayoutGenerated.HR_ICON_W + $.LayoutGenerated.HR_GAP + hrTextW;
-        var hrStartX = $.LayoutGenerated.HR_X - ($.LayoutGenerated.HR_ICON_W / 2);
-        dc.drawRectangle(hrStartX, Y_HR, totalHrW, _dateH);
-
-        if (_isCondWrapped) {
-            var w1 = dc.getTextWidthInPixels(_condLine1, FONT_SMALL);
-            var w2 = dc.getTextWidthInPixels(_condLine2, FONT_SMALL);
-            dc.drawRectangle(CX - (w1 / 2), Y_COND - $.LayoutGenerated.COND_WRAP_V_OFFSET, w1, _dateH);
-            dc.drawRectangle(CX - (w2 / 2), Y_COND, w2, _dateH);
-        } else {
-            var condW = dc.getTextWidthInPixels(_lastCondStr, FONT_SMALL);
-            dc.drawRectangle(CX - (condW / 2), Y_COND, condW, _dateH);
-        }
-        var tempW = dc.getTextWidthInPixels(_lastTempStr, FONT_SMALL);
-        dc.drawRectangle(CX - (tempW / 2), Y_TEMP, tempW, _dateH);
-        
-        var gr = $.LayoutGenerated.DEBUG_GUIDE_R;
-        dc.drawCircle($.LayoutGenerated.BX, $.LayoutGenerated.BY, gr); dc.drawCircle($.LayoutGenerated.SX, $.LayoutGenerated.SY, gr);
+        dc.drawLine(CX, 0, CX, $.LayoutGenerated.HEIGHT); 
+        dc.drawLine(0, CY, $.LayoutGenerated.WIDTH, CY);
     }
 
-    //
-    // Draw a vector-based heart icon
-    //
     private function drawHeartIcon(dc as $.Toybox.Graphics.Dc, color as Number) as Void {
         dc.setColor(color, COLOR_BG);
         var r = $.LayoutGenerated.HEART_LOBE_R;
@@ -347,14 +215,10 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.fillPolygon($.LayoutGenerated.HEART_POLY);
     }
 
-    //
-    // Fetch and update the heart rate sensor data
-    //
     public function updateHeartRate() as Void {
         if ($.Toybox has :Activity) {
             var activityInfo = $.Toybox.Activity.getActivityInfo();
             var rate = (activityInfo != null) ? activityInfo.currentHeartRate : null as Number?;
-            
             var rateVal = (rate != null) ? rate as Number : -1;
             if (rateVal != _lastHrValue) {
                 _lastHrValue = rateVal;
@@ -363,74 +227,23 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         }
     }
 
-    //
-    // Update system stats, clock, and solar data
-    //
     private function updateLongTermData(clockTime as $.Toybox.System.ClockTime, dc as $.Toybox.Graphics.Dc) as Void {
         updateSystemStats();
         _lastTimeStr = FaceLogic.getTimeString(clockTime.hour as $.Toybox.Lang.Number, clockTime.min as $.Toybox.Lang.Number);
-        
-        var now = $.Toybox.Time.now();
-        var info = $.Toybox.Time.Gregorian.info(now, $.Toybox.Time.FORMAT_SHORT);
-        if (info.day != _lastDateDay) {
-            _lastDateDay = info.day;
-            _lastDateStr = FaceLogic.getDateString(info);
-        }
-
-        // Fetch Wake Time if in sleep mode
-        if (_isSleepMode) {
-            var profile = $.Toybox.UserProfile.getProfile();
-            if (profile has :upcomingWakeTime) {
-                _lastWakeStr = FaceLogic.getWakeTimeString(profile.upcomingWakeTime);
-            } else {
-                _lastWakeStr = FaceLogic.STR_EMPTY;
-            }
-        }
-
-        if ($.Toybox has :Weather) {
-            updateWeather($.Toybox.Weather.getCurrentConditions(), dc);
-        }
     }
 
-    //
-    // Update battery and solar intensity
-    //
     public function updateSystemStats() as Void {
         var stats = $.Toybox.System.getSystemStats();
         _batteryLevel = stats.battery;
         _batteryRatio = _batteryLevel / FaceLogic.PERCENT_MAX;
-        if (_batteryLevel != _lastBattLevel) { _lastBattLevel = _batteryLevel; }
         
         var intensity = (stats has :solarIntensity) ? stats.solarIntensity : 0;
         if (intensity == null) { intensity = 0; }
-        if (intensity != _lastSolarValue) {
-            _lastSolarValue = intensity;
-            _solarIntensity = intensity;
-            var clampedIntensity = _solarIntensity > FaceLogic.PERCENT_MAX ? FaceLogic.PERCENT_MAX : _solarIntensity;
-            _solarRatio = clampedIntensity / FaceLogic.PERCENT_MAX;
-        }
-    }
+        var clampedIntensity = intensity > FaceLogic.PERCENT_MAX ? FaceLogic.PERCENT_MAX : intensity;
+        _solarRatio = clampedIntensity / FaceLogic.PERCENT_MAX;
 
-    //
-    // Fetch and format weather condition and temperature data
-    //
-    private function updateWeather(conditions as $.Toybox.Weather.CurrentConditions?, dc as $.Toybox.Graphics.Dc) as Void {
-        var condition = (conditions != null) ? conditions.condition : null;
-        if (condition != _lastWeatherCondition || _lastCondStr.equals("")) {
-            _lastWeatherCondition = (condition != null) ? condition : -1;
-            var str = (condition != null) ? WeatherGenerated.getConditionString(condition) : null;
-            _lastCondStr = (str == null) ? _unknownStr : str;
-            var condWidth = dc.getTextWidthInPixels(_lastCondStr, FONT_SMALL);
-            if (condWidth > MAX_TEXT_WIDTH) {
-                var lines = FaceLogic.splitString(_lastCondStr, dc, FONT_SMALL, MAX_TEXT_WIDTH);
-                _condLine1 = lines[0]; _condLine2 = lines[1]; _isCondWrapped = true;
-            } else { _isCondWrapped = false; }
-        }
-        var temp = (conditions != null) ? conditions.temperature : null;
-        if (temp != _lastTempValue || _lastTempStr.equals("")) {
-            _lastTempValue = (temp != null) ? temp as $.Toybox.Lang.Number : null;
-            _lastTempStr = FaceLogic.getTemperatureString(_lastTempValue);
-        }
+        var info = $.Toybox.ActivityMonitor.getInfo();
+        _stepRatio = FaceLogic.getStepRatio(info.steps, info.stepGoal);
     }
 
     function onEnterSleep() as Void { _isLowPower = true; _lastUpdateMinute = -1; $.Toybox.WatchUi.requestUpdate(); }

@@ -51,15 +51,6 @@ module FaceLogic {
     }
 
     //
-    // Format wake time string (e.g. "Wake 07:00")
-    //
-    function getWakeTimeString(moment as $.Toybox.Time.Moment?) as $.Toybox.Lang.String {
-        if (moment == null) { return STR_DASHES; }
-        var info = $.Toybox.Time.Gregorian.info(moment, $.Toybox.Time.FORMAT_SHORT);
-        return $.Toybox.Lang.format("Wake $1$:$2$", [info.hour.toString(), info.min.format("%02d")]);
-    }
-
-    //
     // Format time string (HH:mm)
     //
     function getTimeString(hour as $.Toybox.Lang.Number, min as $.Toybox.Lang.Number) as $.Toybox.Lang.String {
@@ -67,21 +58,19 @@ module FaceLogic {
     }
 
     //
-    // Format date string (YYYY-MM-DD)
+    // Calculate ratio of steps vs goal (clamped 0.0 to 1.0)
     //
-    function getDateString(info as $.Toybox.Time.Gregorian.Info) as $.Toybox.Lang.String {
-        return $.Toybox.Lang.format("$1$-$2$-$3$", [
-            info.year.toString(),
-            (info.month as $.Toybox.Lang.Number).format("%02d"),
-            (info.day as $.Toybox.Lang.Number).format("%02d")
-        ]);
+    function getStepRatio(steps as Number?, goal as Number?) as Float {
+        if (steps == null || goal == null || goal == 0) { return 0.0; }
+        var ratio = steps.toFloat() / goal.toFloat();
+        return (ratio > 1.0) ? 1.0 : ratio;
     }
 
     //
-    // Format temperature string with degree symbol
+    // Get color for steps ring
     //
-    function getTemperatureString(temp as $.Toybox.Lang.Number?) as $.Toybox.Lang.String {
-        return (temp != null) ? $.Toybox.Lang.format("$1$°", [temp.format("%d")]) : STR_TEMP_DASHES;
+    function getStepColor() as $.Toybox.Graphics.ColorValue {
+        return COLOR_LT_GRAY;
     }
 
     //

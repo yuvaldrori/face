@@ -45,9 +45,8 @@ help:
 	@echo "  check-sim     Check if simulator process is running"
 	@echo "  wait-sim      Wait for simulator to be ready on port 1234"
 
-# Generate weather strings and code from SDK docs
+# Generate layout constants
 generate:
-	@./scripts/generate_weather.sh $(SDK_HOME)
 	@./scripts/generate_layout.sh 260 260
 
 debug: generate
@@ -78,8 +77,7 @@ run-profile: profile
 
 clean:
 	rm -rf bin/*.prg
-	rm -f source/weatherGenerated.mc
-	rm -f resources/strings/weather_gen.xml
+	rm -f source/layoutGenerated.mc
 
 simulator:
 	@echo "Starting simulator..."
