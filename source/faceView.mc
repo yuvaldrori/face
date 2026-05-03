@@ -230,23 +230,30 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         setAntiAliasSafe(dc, false);
         dc.setPenWidth($.LayoutGenerated.PEN_WIDTH_DEBUG);
         
-        // 1. Grid
+        // 1. Grid & Screen Edge
         dc.setColor(FaceLogic.COLOR_RED, COLOR_BG);
         dc.drawLine(CX, 0, CX, $.LayoutGenerated.HEIGHT); 
         dc.drawLine(0, CY, $.LayoutGenerated.WIDTH, CY);
+        dc.drawCircle(CX, CY, ($.LayoutGenerated.WIDTH / 2) - 1);
 
-        // 2. Ring Guides
+        // 2. Ring Guides (Centers)
         dc.setColor(FaceLogic.COLOR_DK_GRAY, COLOR_BG);
         dc.drawCircle(CX, CY, $.LayoutGenerated.RING_SOLAR_R);
         dc.drawCircle(CX, CY, $.LayoutGenerated.RING_STEPS_R);
         dc.drawCircle(CX, CY, $.LayoutGenerated.RING_BATT_R);
 
-        // 3. Text Bounding Box (HR)
+        // 3. Data Boundaries (Green)
         dc.setColor(FaceLogic.COLOR_GREEN, COLOR_BG);
+        
+        // HR Group
         var hrTextW = dc.getTextWidthInPixels(_lastHrStr, FONT_SMALL);
         var totalHrW = 24 + 8 + hrTextW;
         var hrStartX = CX - (totalHrW / 2);
         dc.drawRectangle(hrStartX, Y_HR, totalHrW, dc.getFontHeight(FONT_SMALL));
+        
+        // Time Vertical Span
+        dc.drawLine(0, Y_TIME, $.LayoutGenerated.WIDTH, Y_TIME);
+        dc.drawLine(0, Y_TIME + 180, $.LayoutGenerated.WIDTH, Y_TIME + 180);
     }
 
     private function drawHeartIcon(dc as $.Toybox.Graphics.Dc, color as Number) as Void {

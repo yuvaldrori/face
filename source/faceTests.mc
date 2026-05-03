@@ -64,6 +64,8 @@ function testLayoutBoundaries(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.B
     // Outer R=126, Middle R=112, Inner R=98.
     $.Toybox.Test.assert($.LayoutGenerated.RING_SOLAR_R == 126);
     $.Toybox.Test.assert($.LayoutGenerated.RING_BATT_R == 98);
+    // Y_HR at 175, clears ring inner edge (221 at bottom)
+    $.Toybox.Test.assert($.LayoutGenerated.Y_HR == 175);
     
     return true;
 }

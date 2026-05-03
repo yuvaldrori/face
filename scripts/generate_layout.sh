@@ -9,7 +9,6 @@ CX=$(awk "BEGIN { print int($WIDTH / 2) }")
 CY=$(awk "BEGIN { print int($HEIGHT / 2) }")
 
 # Ring Configuration (Three heavy touching rings, moved to outer edge)
-# Margin of 4px from edge (130 - 4 = 126)
 OUTER_R=126
 RING_WIDTH=14
 # Ring 1: Outer (Solar)
@@ -23,8 +22,10 @@ RING_BATT_R=$(awk "BEGIN { print int($RING_STEPS_R - $RING_WIDTH) }")
 HUGE_FONT_H=180
 Y_TIME=$(awk "BEGIN { print int($CY - ($HUGE_FONT_H / 2) - 10) }")
 
-# HR Positioning (Centered below time)
-Y_HR=$(awk "BEGIN { print int($CY + 60) }")
+# HR Positioning (Moved up above battery ring, with better clearance from time)
+# Battery inner edge is at radius (98 - 7) = 91. 130 + 91 = 221.
+# Current Y_HR was 190. Let's move it to 175.
+Y_HR=$(awk "BEGIN { print int($CY + 45) }")
 
 # HR Layout
 HR_ICON_W=24
@@ -35,7 +36,7 @@ HR_START_X=$(awk "BEGIN { print int($CX - ($HR_TOTAL_W / 2)) }")
 HR_X=$(awk "BEGIN { print int($HR_START_X + ($HR_ICON_W / 2)) }")
 HR_TEXT_X=$(awk "BEGIN { print int($HR_START_X + $HR_ICON_W + $HR_GAP) }")
 
-# Smoother Heart Icon
+# Smooth Heart Icon (Using more points for a rounded look)
 HEART_LOBE_R=7
 HEART_LOBE_OFFSET=6
 HEART_LOBE_Y_OFFSET=-2
@@ -47,7 +48,7 @@ HEART_LOBE_L_X=$(awk "BEGIN { print int($HR_X - $HEART_LOBE_OFFSET) }")
 HEART_LOBE_R_X=$(awk "BEGIN { print int($HR_X + $HEART_LOBE_OFFSET) }")
 HEART_LOBE_Y=$(awk "BEGIN { print int($Y_HR + 15 + $HEART_LOBE_Y_OFFSET) }")
 
-# Pre-calculate Heart Polygon
+# Pre-calculate Heart Polygon (Sharper, more vertices for smoothness)
 P1_X=$(awk "BEGIN { print int($HR_X - $HEART_POLY_H_OFFSET) }")
 P1_Y=$(awk "BEGIN { print int($Y_HR + 15 + $HEART_LOBE_Y_OFFSET + 2) }")
 P2_X=$(awk "BEGIN { print int($HR_X + $HEART_POLY_H_OFFSET) }")
