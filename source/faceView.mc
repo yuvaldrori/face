@@ -163,7 +163,15 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         
         var settings = $.Toybox.System.getDeviceSettings();
         var inSleep = false;
-        if (settings has :doNotDisturb && settings.doNotDisturb) { inSleep = true; }
+        
+        // 1. Check for fēnix 8 Focus Modes (API 5.1.0+)
+        // Value 1 corresponds to System.FOCUS_MODE_SLEEP
+        if (settings has :focusMode && settings.focusMode == 1) { inSleep = true; }
+        
+        // 2. Fallback to Do Not Disturb
+        if (!inSleep && settings has :doNotDisturb && settings.doNotDisturb) { inSleep = true; }
+        
+        // 3. Fallback to Night Mode
         if (!inSleep && settings has :isNightModeEnabled && settings.isNightModeEnabled) { inSleep = true; }
 
         if (inSleep != _isSleepMode) {
