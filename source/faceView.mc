@@ -25,8 +25,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     
     private var _lastHrValue as $.Toybox.Lang.Number = -1;
     private var _lastHrStr as $.Toybox.Lang.String = FaceLogic.STR_DASHES;
-    private var _hour as $.Toybox.Lang.Number = 0;
-    private var _min as $.Toybox.Lang.Number = 0;
+    private var _lastTimeStr as $.Toybox.Lang.String = "";
 
     // Layout Constants (Optimized for 260x260 MIP)
     private const CX = $.LayoutGenerated.CX; 
@@ -47,6 +46,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Static Background Buffer (Track arcs)
     private var _staticBuffer as $.Toybox.Graphics.BufferedBitmapReference? = null;
     private var _lastBufferMinute as $.Toybox.Lang.Number = -1;
+    private var _hugeFont as $.Toybox.Graphics.VectorFont? = null;
 
     function initialize() {
         WatchFace.initialize();
@@ -67,6 +67,13 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Set up UI component dimensions and initial data
     //
     function onLayout(dc as $.Toybox.Graphics.Dc) as Void {
+        if ($.Toybox.Graphics has :getVectorFont) {
+            _hugeFont = $.Toybox.Graphics.getVectorFont({
+                :face => "RobotoCondensedBold",
+                :size => $.LayoutGenerated.HUGE_FONT_SIZE
+            });
+        }
+        
         initializeStaticBuffer();
         var clockTime = $.Toybox.System.getClockTime();
         updateLongTermData(clockTime, dc);
@@ -187,16 +194,9 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         var mainColor = _isSleepMode ? FaceLogic.COLOR_DK_GRAY : COLOR_MAIN;
         dc.setColor(mainColor, $.Toybox.Graphics.COLOR_TRANSPARENT);
 
-        // Huge Block Time
-        var h1 = _hour / 10;
-        var h2 = _hour % 10;
-        var m1 = _min / 10;
-        var m2 = _min % 10;
-
-        drawDigit(dc, $.LayoutGenerated.T1_X, Y_TIME, h1);
-        drawDigit(dc, $.LayoutGenerated.T2_X, Y_TIME, h2);
-        drawDigit(dc, $.LayoutGenerated.T3_X, Y_TIME, m1);
-        drawDigit(dc, $.LayoutGenerated.T4_X, Y_TIME, m2);
+        // Huge Scalable Time
+        var font = _hugeFont != null ? _hugeFont : $.Toybox.Graphics.FONT_NUMBER_THAI_HOT;
+        dc.drawText(CX, Y_TIME, font, _lastTimeStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
         
         if (!_isSleepMode) {
             drawHeartIcon(dc, COLOR_HEART);
@@ -205,14 +205,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         }
 
         setAntiAliasSafe(dc, false);
-    }
-
-    private function drawDigit(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, digit as Number) as Void {
-        var blocks = $.LayoutGenerated.DIGITS[digit] as Array<Array<Number>>;
-        for (var i = 0; i < blocks.size(); i++) {
-            var b = blocks[i];
-            dc.fillRectangle(x + b[0], y + b[1], b[2], b[3]);
-        }
     }
 
     private function drawDebugOverlay(dc as $.Toybox.Graphics.Dc) as Void {
@@ -244,8 +236,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
     private function updateLongTermData(clockTime as $.Toybox.System.ClockTime, dc as $.Toybox.Graphics.Dc) as Void {
         updateSystemStats();
-        _hour = clockTime.hour as $.Toybox.Lang.Number;
-        _min = clockTime.min as $.Toybox.Lang.Number;
+        _lastTimeStr = FaceLogic.getTimeString(clockTime.hour as $.Toybox.Lang.Number, clockTime.min as $.Toybox.Lang.Number);
     }
 
     public function updateSystemStats() as Void {
