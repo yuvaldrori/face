@@ -254,7 +254,9 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         var r = $.LayoutGenerated.HEART_LOBE_R;
         dc.fillCircle($.LayoutGenerated.HEART_LOBE_L_X, $.LayoutGenerated.HEART_LOBE_Y, r); 
         dc.fillCircle($.LayoutGenerated.HEART_LOBE_R_X, $.LayoutGenerated.HEART_LOBE_Y, r);
-        dc.fillPolygon($.LayoutGenerated.HEART_POLY as Array<Array<Number>>);
+        
+        var pts = $.LayoutGenerated.HEART_POLY;
+        dc.fillPolygon([[pts[0][0], pts[0][1]], [pts[1][0], pts[1][1]], [pts[2][0], pts[2][1]]]);
     }
 
     public function updateHeartRate() as Void {
