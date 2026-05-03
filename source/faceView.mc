@@ -25,7 +25,8 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     
     private var _lastHrValue as $.Toybox.Lang.Number = -1;
     private var _lastHrStr as $.Toybox.Lang.String = FaceLogic.STR_DASHES;
-    private var _lastTimeStr as $.Toybox.Lang.String = "";
+    private var _hour as $.Toybox.Lang.Number = 0;
+    private var _min as $.Toybox.Lang.Number = 0;
 
     // Layout Constants (Optimized for 260x260 MIP)
     private const CX = $.LayoutGenerated.CX; 
@@ -194,9 +195,10 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         var mainColor = _isSleepMode ? FaceLogic.COLOR_DK_GRAY : COLOR_MAIN;
         dc.setColor(mainColor, $.Toybox.Graphics.COLOR_TRANSPARENT);
 
-        // Huge Scalable Time
+        // Huge Scalable Time (Tight Tracking)
         var font = _hugeFont != null ? _hugeFont : $.Toybox.Graphics.FONT_NUMBER_THAI_HOT;
-        dc.drawText(CX, Y_TIME, font, _lastTimeStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
+        var timeStr = Lang.format("$1$$2$", [_hour.format("%02d"), _min.format("%02d")]);
+        drawTightText(dc, CX, Y_TIME, font, timeStr, -14); // -14px tracking for 180px font
         
         if (!_isSleepMode) {
             drawHeartIcon(dc, COLOR_HEART);
@@ -205,6 +207,29 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         }
 
         setAntiAliasSafe(dc, false);
+    }
+
+    //
+    // Render text with custom character tracking (spacing)
+    //
+    private function drawTightText(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, font as Object, text as String, tracking as Number) as Void {
+        var chars = text.toCharArray();
+        var totalW = 0;
+        var widths = new [chars.size()];
+        
+        for (var i = 0; i < chars.size(); i++) {
+            var s = chars[i].toString();
+            widths[i] = dc.getTextWidthInPixels(s, font as Graphics.VectorFont);
+            totalW += widths[i];
+            if (i < chars.size() - 1) { totalW += tracking; }
+        }
+        
+        var curX = (x - (totalW / 2)) as Number;
+        for (var i = 0; i < chars.size(); i++) {
+            var s = chars[i].toString();
+            dc.drawText(curX, y, font as Graphics.VectorFont, s, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
+            curX += widths[i] + tracking;
+        }
     }
 
     private function drawDebugOverlay(dc as $.Toybox.Graphics.Dc) as Void {
@@ -236,7 +261,8 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
     private function updateLongTermData(clockTime as $.Toybox.System.ClockTime, dc as $.Toybox.Graphics.Dc) as Void {
         updateSystemStats();
-        _lastTimeStr = FaceLogic.getTimeString(clockTime.hour as $.Toybox.Lang.Number, clockTime.min as $.Toybox.Lang.Number);
+        _hour = clockTime.hour as $.Toybox.Lang.Number;
+        _min = clockTime.min as $.Toybox.Lang.Number;
     }
 
     public function updateSystemStats() as Void {
