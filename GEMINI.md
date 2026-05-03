@@ -21,20 +21,25 @@ The display palette is limited. To prevent UI elements (like the Clock) from "bi
 
 ## 2. Rendering Strategy & Optimization
 
-### The "Fenix 8 Solar Quirk": Partial vs. Full Updates
-Research and empirical testing confirmed that `onPartialUpdate` is ineffective on Fenix 8 Solar (System 7/8).
-- **Behavior:** The hardware frequently forces a full `onUpdate` refresh (1Hz) even when in low-power mode, bypassing the partial clipping state.
-- **Strategy (Minimal Full Redraw):** Instead of fighting for partial updates, we use a "Minimal Full Redraw" model:
-    - **Static Background Buffer:** A 4-bit (16-color) `BufferedBitmap` caches the ring tracks, icons, and labels. This is updated only once per minute or on wake.
-    - **Consolidated Rendering:** All background elements MUST be rendered via a shared `renderStatic(dc)` method to ensure consistency between the buffer update and any fallback redraws.
-    - **1Hz Redraw:** The main `onUpdate` loop performs a hardware-accelerated `drawBitmap` of the background and then overlays only the dynamic text (Clock, HR).
-    - **Smart Polling:** Heart Rate polling is reduced to **once per minute** (on the minute change) when the watch is in low-power mode (`_isLowPower`). Live 1Hz HR polling occurs only when the user is actively viewing the face.
+### Reactive Data Model (Complications API)
+The watch face utilizes the **Toybox.Complications** API for primary data streams (Solar, Steps, Battery, Heart Rate). 
+- **Event-Driven:** Data is updated via the `onComplicationChanged` callback, eliminating the power cost of continuous polling.
+- **Immediate Redraw:** The App class implements `onSettingsChanged()` to trigger an immediate `requestUpdate()`. This ensures the UI reacts instantly to system toggles like **Do Not Disturb (DND)**.
+- **Fallback acquisition:** The `updateSystemStatsFallback()` method ensures data is populated immediately upon startup before the first complication event fires.
+
+### Huge Vector Typography & Tracking
+To achieve a bold, screen-filling time display that exceeds standard font limits:
+- **Vector Fonts:** The time is rendered using `Graphics.getVectorFont` (RobotoCondensedBold) at **180px**.
+- **Custom Tracking (Kerning):** Character spacing is manually tightened using a custom rendering loop (e.g., **-14px** tracking). This ensures the "Huge" digits feel dense and centered.
+- **Consolidated Logic:** Rendering and debug overlay calculations MUST use the shared `drawTightText` helper to ensure visual and diagnostic synchronization.
+
+### The "Fenix 8 Solar Quirk": Sleep & Focus Detection
+Research on actual fenix 8 hardware confirms that Focus Mode flags (like `focusMode == 1`) are not consistently exposed to third-party watch faces.
+- **The Standard Trigger:** Sleep visuals (dimming, hiding rings) must rely on the system `doNotDisturb` flag.
+- **Lifecycle Sync:** The `onEnterSleep()` and `onExitSleep()` callbacks provide the primary trigger for low-power state transitions, synced with the `_isSleepMode` state.
 
 ### Ultra-Safe Arcs (Hardware Stability)
-Directly calling `dc.drawArc()` with large spans or crossing the 0/360-degree boundary can trigger a hardware driver failure that renders a muddy "orange circle" artifact.
-- **Ultra-Granular Segments:** All arcs are drawn using `drawSafeArc`, breaking segments into **20-degree chunks**.
-- **Angle Wrapping:** All angles are strictly wrapped to the `0-360` range.
-- **Anti-Aliasing Shield:** Shape primitives (arcs, icons) are drawn with anti-aliasing **OFF** to prevent driver crashes. Use the `setAntiAliasSafe(dc, enable)` helper to manage this state reliably across supported hardware.
+... (keep existing drawSafeArc and anti-alias shield notes)
 
 ## 3. Automation & Spatial Math
 
@@ -69,20 +74,22 @@ All contributions must strictly adhere to the [official Garmin Monkey C Coding C
 - **Architecture:** Always call the superclass `initialize()` method on the first line of any `initialize` function.
 - **Formatting:** Use 4-space indentation and same-line opening braces.
 - **Structure:** Maintain a strict "one class per file" policy.
-
 ## 5. Debug & Alignment
 
 The project maintains a professional-grade **Alignment Overlay** to verify geometric precision.
 - **Toggle:** Controlled via the `debug_on` / `debug_off` annotations in `monkey.jungle` and `debug.jungle`.
-- **Visibility:** Uses high-contrast `COLOR_RED` for crosshairs and `COLOR_GREEN` for bounding boxes. 
-- **Sync:** The debug bounding boxes must always be updated to match the active vertical offsets (e.g., `yTimeUp`) used in the main rendering loop.
+- **Visibility:** Uses high-contrast `COLOR_RED` for crosshairs and **green bounding boxes** for character-level alignment. 
+- **Sync:** The debug bounding boxes for the "Huge" digits must be derived using the same `drawTightText` logic as the visual output to ensure absolute parity.
 
 ## 6. Quality Assurance
 
-- **Unit Tests:** `source/faceTests.mc` contains geometric validation, string logic, and palette integrity tests. 
-    - **`testWeatherWrappingExhaustive`**: Programmatically injects every SDK weather condition ID to verify that multi-line wrapping (`_isCondWrapped`) works correctly for all possible strings.
-    - **`testPaletteCompleteness`**: Ensures all colors used in the rendering logic are explicitly defined in the static buffer's 4-bit palette.
+- **Unit Tests:** `source/faceTests.mc` contains geometric validation, reactive logic, and palette integrity tests. 
+    - **`testStepRatio`**: Validates the math for the Step ring, including null handling and goal over-achievement.
+    - **`testPaletteCompleteness`**: Ensures all colors (including **Cyan**) are explicitly defined in the static buffer's 4-bit palette.
+    - **`testRequiredSymbols`**: Verifies the presence of the **Complications** module and its native type constants in the target environment.
 - **Memory Profiling:**
+...
+
     - **`make heap-check`**: Runs the debug PRG in the simulator with the `-log` flag. This allows monitoring of peak memory usage. Aim to keep the watch face under **96KB** for maximum compatibility.
 - **Visual Alignment:**
     - **`make run-align`**: Essential for verifying that bounding boxes correctly match the text offsets (e.g., `yTimeUp`).

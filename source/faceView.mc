@@ -11,7 +11,6 @@ import Toybox.Time;
 import Toybox.Time.Gregorian;
 import Toybox.Activity;
 import Toybox.Complications;
-import Toybox.UserProfile;
 
 class FaceView extends $.Toybox.WatchUi.WatchFace {
 
@@ -162,6 +161,15 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         setAntiAliasSafe(dc, false);
         dc.clearClip();
         
+        // Use a simple single DND check for Sleep Mode
+        var settings = $.Toybox.System.getDeviceSettings();
+        var inSleep = (settings has :doNotDisturb && settings.doNotDisturb);
+
+        if (inSleep != _isSleepMode) {
+            _isSleepMode = inSleep;
+            _lastUpdateMinute = -1;
+        }
+
         var clockTime = $.Toybox.System.getClockTime();
         var isFullUpdate = FaceLogic.needsFullUpdate(_lastUpdateMinute, clockTime.min);
 
