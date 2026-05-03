@@ -63,6 +63,7 @@ module LayoutGenerated {
     const HEIGHT = $HEIGHT;
     const CX = $CX;
     const CY = $CY;
+    const SCREEN_R = $(awk "BEGIN { print int($WIDTH / 2) - 1 }");
     
     const RING_WIDTH = $RING_WIDTH;
     const RING_SOLAR_R = $RING_SOLAR_R;
@@ -71,7 +72,10 @@ module LayoutGenerated {
 
     const Y_TIME = $Y_TIME;
     const HUGE_FONT_SIZE = $HUGE_FONT_H;
+    const TIME_TRACKING = -14;
 
+    const HR_ICON_W = $HR_ICON_W;
+    const HR_GAP = $HR_GAP;
     const Y_HR = $Y_HR;
     const HR_X = $HR_X;
     const HR_TEXT_X = $HR_TEXT_X;

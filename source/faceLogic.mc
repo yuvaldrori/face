@@ -4,7 +4,6 @@
 //
 
 import Toybox.Lang;
-import Toybox.Time.Gregorian;
 import Toybox.Graphics;
 
 module FaceLogic {
@@ -56,7 +55,7 @@ module FaceLogic {
     //
     // Calculate ratio of steps vs goal (clamped 0.0 to 1.0)
     //
-    function getStepRatio(steps as Number?, goal as Number?) as Float {
+    function getStepRatio(steps as Numeric?, goal as Numeric?) as Float {
         if (steps == null || goal == null || goal == 0) { return 0.0; }
         var ratio = steps.toFloat() / goal.toFloat();
         return (ratio > 1.0) ? 1.0 : ratio;
@@ -76,102 +75,4 @@ module FaceLogic {
         return lastMinute != currentMinute;
     }
 
-    //
-    // Strictly wrap an angle into the 0-360 range for hardware driver stability
-    // Supports Floats to maintain precision for overlap calculations
-    //
-    function wrapAngle(angle as Numeric) as Numeric {
-        var a = angle.toFloat();
-        while (a < 0) { a += FULL_CIRCLE_DEGREES; }
-        while (a >= FULL_CIRCLE_DEGREES) { a -= FULL_CIRCLE_DEGREES; }
-        return a;
-    }
-
-    //
-    // Draw an arc in 20-degree segments to prevent the Fenix 8 Solar driver bug
-    //
-    function drawSafeArc(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, radius as Number, direction as $.Toybox.Graphics.ArcDirection, start as Numeric, end as Numeric) as Void {
-        var totalAngle = 0.0;
-        if (direction == Graphics.ARC_COUNTER_CLOCKWISE) {
-            totalAngle = (end - start).toFloat();
-        } else {
-            totalAngle = (start - end).toFloat();
-        }
-        
-        while (totalAngle < 0) { totalAngle += FULL_CIRCLE_DEGREES; }
-        while (totalAngle > FULL_CIRCLE_DEGREES) { totalAngle -= FULL_CIRCLE_DEGREES; }
-        if (totalAngle == 0 && start != end) { totalAngle = FULL_CIRCLE_DEGREES.toFloat(); } 
-        if (totalAngle <= 0) { return; }
-
-        if (totalAngle <= ARC_SEGMENT_DEGREES) {
-            dc.drawArc(x, y, radius, direction, wrapAngle(start), wrapAngle(end));
-        } else {
-            var segments = (totalAngle / (ARC_SEGMENT_DEGREES * 1.0)).toNumber() + 1;
-            var step = totalAngle.toFloat() / segments.toFloat();
-            var current = start.toFloat();
-            for (var i = 0; i < segments; i++) {
-                var next = (direction == Graphics.ARC_COUNTER_CLOCKWISE) ? (current + step) : (current - step);
-                // Add 0.5 degree overlap to prevent pixel gaps on MIP displays
-                var overlap = (direction == Graphics.ARC_COUNTER_CLOCKWISE) ? 0.5 : -0.5;
-                dc.drawArc(x, y, radius, direction, wrapAngle(current), wrapAngle(next + overlap));
-                current = next;
-            }
-        }
-    }
-
-    //
-    // Split a string into two lines based on a maximum pixel width
-    //
-    function splitString(str as $.Toybox.Lang.String, dc as $.Toybox.Graphics.Dc, font as $.Toybox.Graphics.FontDefinition, maxWidth as $.Toybox.Lang.Number) as [$.Toybox.Lang.String, $.Toybox.Lang.String] {
-        var words = [] as Array<String>;
-        var searchStart = 0;
-        var spaceIdx = str.find(STR_SPACE);
-        
-        while (spaceIdx != null) {
-            var word = str.substring(searchStart, spaceIdx);
-            if (word != null && word.length() > 0) {
-                words.add(word);
-            }
-            searchStart = spaceIdx + 1;
-            var remaining = str.substring(searchStart, str.length());
-            if (remaining != null) {
-                spaceIdx = remaining.find(STR_SPACE);
-                if (spaceIdx != null) {
-                    spaceIdx += searchStart;
-                }
-            } else {
-                spaceIdx = null;
-            }
-        }
-        
-        var lastWord = str.substring(searchStart, str.length());
-        if (lastWord != null && lastWord.length() > 0) {
-            words.add(lastWord);
-        }
-
-        var line1 = STR_EMPTY;
-        var line2 = STR_EMPTY;
-        var line1Full = false;
-        if (words.size() == 0) { return [STR_EMPTY, STR_EMPTY]; }
-
-        for (var i = 0; i < words.size(); i++) {
-            if (!line1Full) {
-                var testLine = (line1.length() == 0) ? words[i] : line1 + STR_SPACE + words[i];
-                if (dc.getTextWidthInPixels(testLine, font) <= maxWidth) {
-                    line1 = testLine;
-                } else {
-                    if (line1.length() == 0) {
-                        line1 = words[i];
-                        line1Full = true;
-                    } else {
-                        line1Full = true;
-                        line2 = words[i];
-                    }
-                }
-            } else {
-                line2 = (line2.length() == 0) ? words[i] : line2 + STR_SPACE + words[i];
-            }
-        }
-        return [line1, line2];
-    }
 }

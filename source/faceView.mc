@@ -7,9 +7,6 @@ import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.System;
 import Toybox.WatchUi;
-import Toybox.Time;
-import Toybox.Time.Gregorian;
-import Toybox.Activity;
 import Toybox.Complications;
 
 class FaceView extends $.Toybox.WatchUi.WatchFace {
@@ -25,8 +22,13 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     
     private var _lastHrValue as $.Toybox.Lang.Number = -1;
     private var _lastHrStr as $.Toybox.Lang.String = FaceLogic.STR_DASHES;
-    private var _hour as $.Toybox.Lang.Number = 0;
-    private var _min as $.Toybox.Lang.Number = 0;
+    public var _hour as $.Toybox.Lang.Number = 0;
+    public var _min as $.Toybox.Lang.Number = 0;
+    public var _lastFallbackMinute as $.Toybox.Lang.Number = -1;
+
+    public var _lastTimeStr as $.Toybox.Lang.String = "";
+    public var _timeWidths as $.Toybox.Lang.Array<$.Toybox.Lang.Number> = [] as $.Toybox.Lang.Array<$.Toybox.Lang.Number>;
+    public var _timeTotalW as $.Toybox.Lang.Number = 0;
 
     // Complication IDs
     private var _complicationSolar as Complications.Id? = null;
@@ -102,7 +104,9 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
                 try {
                     Complications.subscribeToUpdates(ids[i]);
                 } catch (e) {
-                    // Handle unsupported complication types
+                    if ($.Toybox.System has :println) {
+                        $.Toybox.System.println("Complication sub failed: " + ids[i] + " (" + e.getErrorMessage() + ")");
+                    }
                 }
             }
         }
@@ -116,17 +120,24 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         if (complication != null) {
             var val = complication.value;
             if (val != null) {
+                var needsBackgroundRedraw = false;
                 if (id.equals(_complicationSolar)) {
-                    var floatVal = (val instanceof Float) ? val as Float : (val as Number).toFloat();
+                    var floatVal = (val as Numeric).toFloat();
                     var clampedIntensity = floatVal > FaceLogic.PERCENT_MAX ? FaceLogic.PERCENT_MAX : floatVal;
                     _solarRatio = clampedIntensity / FaceLogic.PERCENT_MAX;
+                    needsBackgroundRedraw = true;
                 } else if (id.equals(_complicationSteps)) {
                     var info = $.Toybox.ActivityMonitor.getInfo();
-                    _stepRatio = FaceLogic.getStepRatio((val as Number), info.stepGoal);
+                    if (info != null) {
+                        _stepRatio = FaceLogic.getStepRatio(val as Numeric, info.stepGoal);
+                    } else {
+                        _stepRatio = 0.0;
+                    }
+                    needsBackgroundRedraw = true;
                 } else if (id.equals(_complicationBattery)) {
-                    var floatVal = (val instanceof Float) ? val as Float : (val as Number).toFloat();
-                    _batteryLevel = floatVal;
+                    _batteryLevel = (val as Numeric).toFloat();
                     _batteryRatio = _batteryLevel / FaceLogic.PERCENT_MAX;
+                    needsBackgroundRedraw = true;
                 } else if (id.equals(_complicationHR)) {
                     var hr = (val as Number);
                     if (hr != _lastHrValue) {
@@ -135,6 +146,9 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
                     }
                 }
                 
+                if (needsBackgroundRedraw && !_isSleepMode) {
+                    _lastBufferMinute = -1; // Force static buffer update on next onUpdate
+                }
                 $.Toybox.WatchUi.requestUpdate();
             }
         }
@@ -161,20 +175,19 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         setAntiAliasSafe(dc, false);
         dc.clearClip();
         
-        // Use a simple single DND check for Sleep Mode
-        var settings = $.Toybox.System.getDeviceSettings();
-        var inSleep = (settings has :doNotDisturb && settings.doNotDisturb);
-
-        if (inSleep != _isSleepMode) {
-            _isSleepMode = inSleep;
-            _lastUpdateMinute = -1;
-        }
-
         var clockTime = $.Toybox.System.getClockTime();
         var isFullUpdate = FaceLogic.needsFullUpdate(_lastUpdateMinute, clockTime.min);
 
         if (isFullUpdate) {
             _lastUpdateMinute = clockTime.min;
+            
+            // Check DND status once a minute (or when settings change)
+            var settings = $.Toybox.System.getDeviceSettings();
+            var inSleep = (settings has :doNotDisturb && settings.doNotDisturb);
+            if (inSleep != _isSleepMode) {
+                _isSleepMode = inSleep;
+            }
+
             updateLongTermData(clockTime, dc);
         }
 
@@ -218,24 +231,22 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
     private function renderAllRings(dc as $.Toybox.Graphics.Dc) as Void {
         dc.setPenWidth(RING_WIDTH);
-
+        
         // 1. Solar Ring (Outer)
-        if (_solarRatio > 0) {
-            dc.setColor(FaceLogic.COLOR_YELLOW, COLOR_BG);
-            FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_SOLAR_R, Graphics.ARC_COUNTER_CLOCKWISE, 90, (90 + (360 * _solarRatio)).toNumber());
-        }
-
+        drawRingArc(dc, $.LayoutGenerated.RING_SOLAR_R, _solarRatio, FaceLogic.COLOR_YELLOW);
+        
         // 2. Steps Ring (Middle)
-        if (_stepRatio > 0) {
-            dc.setColor(FaceLogic.getStepColor(), COLOR_BG);
-            FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_STEPS_R, Graphics.ARC_COUNTER_CLOCKWISE, 90, (90 + (360 * _stepRatio)).toNumber());
-        }
-
+        drawRingArc(dc, $.LayoutGenerated.RING_STEPS_R, _stepRatio, FaceLogic.getStepColor());
+        
         // 3. Battery Ring (Inner)
-        if (_batteryRatio > 0) {
-            dc.setColor(getBatteryColor(_batteryLevel), COLOR_BG);
-            FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_BATT_R, Graphics.ARC_COUNTER_CLOCKWISE, 90, (90 + (360 * _batteryRatio)).toNumber());
-        }
+        drawRingArc(dc, $.LayoutGenerated.RING_BATT_R, _batteryRatio, getBatteryColor(_batteryLevel));
+    }
+
+    private function drawRingArc(dc as $.Toybox.Graphics.Dc, radius as Number, ratio as Float, color as ColorValue) as Void {
+        if (ratio <= 0) { return; }
+        dc.setColor(color, COLOR_BG);
+        var endAngle = 90 + (360 * ratio);
+        dc.drawArc(CX, CY, radius, Graphics.ARC_COUNTER_CLOCKWISE, 90, endAngle.toNumber());
     }
 
     public function renderDynamicUI(dc as $.Toybox.Graphics.Dc) as Void {
@@ -247,7 +258,20 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         // Huge Scalable Time (Tight Tracking)
         var font = _hugeFont != null ? _hugeFont : $.Toybox.Graphics.FONT_NUMBER_THAI_HOT;
         var timeStr = Lang.format("$1$$2$", [_hour.format("%02d"), _min.format("%02d")]);
-        drawTightText(dc, CX, Y_TIME, font, timeStr, -14, $.DEBUG_ALIGNMENT);
+        
+        if (!timeStr.equals(_lastTimeStr)) {
+            _lastTimeStr = timeStr;
+            var chars = timeStr.toCharArray();
+            _timeWidths = new [chars.size()] as Array<Number>;
+            _timeTotalW = 0;
+            for (var i = 0; i < chars.size(); i++) {
+                _timeWidths[i] = dc.getTextWidthInPixels(chars[i].toString(), font) as Number;
+                _timeTotalW += _timeWidths[i];
+                if (i < chars.size() - 1) { _timeTotalW += $.LayoutGenerated.TIME_TRACKING; }
+            }
+        }
+
+        drawCachedTightText(dc, CX, Y_TIME, font, timeStr, _timeWidths, _timeTotalW, $.LayoutGenerated.TIME_TRACKING, $.DEBUG_ALIGNMENT);
         
         if (!_isSleepMode) {
             drawHeartIcon(dc, COLOR_HEART);
@@ -259,23 +283,12 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     }
 
     //
-    // Render text with custom character tracking (spacing)
+    // Render text with custom character tracking using cached dimensions
     //
-    private function drawTightText(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, font as Object, text as String, tracking as Number, debug as Boolean) as Void {
+    private function drawCachedTightText(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, font as Object, text as String, widths as Array<Number>, totalW as Number, tracking as Number, debug as Boolean) as Void {
         var chars = text.toCharArray();
-        var totalW = 0;
-        var widths = new [chars.size()] as Array<Number>;
-        var vFont = font as Graphics.VectorFont;
-        
-        for (var i = 0; i < chars.size(); i++) {
-            var s = chars[i].toString();
-            widths[i] = dc.getTextWidthInPixels(s, vFont) as Number;
-            totalW += widths[i];
-            if (i < chars.size() - 1) { totalW += tracking; }
-        }
-        
         var curX = (x - (totalW / 2)) as Number;
-        var fontH = dc.getFontHeight(vFont) as Number;
+        var fontH = dc.getFontHeight(font as $.Toybox.Graphics.FontDefinition) as Number;
 
         for (var i = 0; i < chars.size(); i++) {
             var s = chars[i].toString();
@@ -284,7 +297,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
                 dc.drawRectangle(curX, y, widths[i] as Number, fontH);
                 dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
             }
-            dc.drawText(curX, y, vFont, s, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
+            dc.drawText(curX, y, font as $.Toybox.Graphics.FontDefinition, s, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
             curX += widths[i] + tracking;
         }
     }
@@ -297,7 +310,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.setColor(FaceLogic.COLOR_RED, COLOR_BG);
         dc.drawLine(CX, 0, CX, $.LayoutGenerated.HEIGHT); 
         dc.drawLine(0, CY, $.LayoutGenerated.WIDTH, CY);
-        dc.drawCircle(CX, CY, ($.LayoutGenerated.WIDTH / 2) - 1);
+        dc.drawCircle(CX, CY, $.LayoutGenerated.SCREEN_R);
 
         // 2. Ring Guides (Centers)
         dc.setColor(FaceLogic.COLOR_DK_GRAY, COLOR_BG);
@@ -310,7 +323,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         
         // HR Group
         var hrTextW = dc.getTextWidthInPixels(_lastHrStr, FONT_SMALL);
-        var totalHrW = 24 + 8 + hrTextW;
+        var totalHrW = $.LayoutGenerated.HR_ICON_W + $.LayoutGenerated.HR_GAP + hrTextW;
         var hrStartX = CX - (totalHrW / 2);
         dc.drawRectangle(hrStartX, Y_HR, totalHrW, dc.getFontHeight(FONT_SMALL));
     }
@@ -325,12 +338,15 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.fillPolygon([[pts[0][0], pts[0][1]], [pts[1][0], pts[1][1]], [pts[2][0], pts[2][1]]]);
     }
 
-    private function updateLongTermData(clockTime as $.Toybox.System.ClockTime, dc as $.Toybox.Graphics.Dc) as Void {
+    public function updateLongTermData(clockTime as $.Toybox.System.ClockTime, dc as $.Toybox.Graphics.Dc) as Void {
         _hour = clockTime.hour as $.Toybox.Lang.Number;
         _min = clockTime.min as $.Toybox.Lang.Number;
         
-        // Initial data fetch if complications haven't fired yet
-        if (_batteryRatio == 0.0) { updateSystemStatsFallback(); }
+        // Periodically refresh data from system as fallback (every 5 mins)
+        if (_lastFallbackMinute == -1 || (_min % 5 == 0 && _lastFallbackMinute != _min)) {
+            _lastFallbackMinute = _min;
+            updateSystemStatsFallback();
+        }
     }
 
     public function updateSystemStatsFallback() as Void {
@@ -344,9 +360,18 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         _solarRatio = clampedIntensity / FaceLogic.PERCENT_MAX;
 
         var info = $.Toybox.ActivityMonitor.getInfo();
-        _stepRatio = FaceLogic.getStepRatio(info.steps, info.stepGoal);
+        if (info != null) {
+            _stepRatio = FaceLogic.getStepRatio(info.steps, info.stepGoal);
+        } else {
+            _stepRatio = 0.0;
+        }
     }
 
     function onEnterSleep() as Void { _isSleepMode = true; _lastUpdateMinute = -1; $.Toybox.WatchUi.requestUpdate(); }
-    function onExitSleep() as Void { _isSleepMode = false; _lastUpdateMinute = -1; $.Toybox.WatchUi.requestUpdate(); }
+    function onExitSleep() as Void { 
+        _isSleepMode = false; 
+        _lastUpdateMinute = -1; 
+        _lastBufferMinute = -1; // Force background redraw when waking up
+        $.Toybox.WatchUi.requestUpdate(); 
+    }
 }

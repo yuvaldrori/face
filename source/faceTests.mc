@@ -71,56 +71,6 @@ function testLayoutBoundaries(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.B
 }
 
 //
-// Verify the segmentation and overlap logic of the safe arc helper
-//
-(:test)
-function testDrawSafeArcSegments(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    var mockDc = new MockDc();
-    
-    // 20 degree arc -> 1 call
-    mockDc.drawArcCalls = 0;
-    FaceLogic.drawSafeArc(mockDc as $.Toybox.Graphics.Dc, 130, 130, 125, $.Toybox.Graphics.ARC_COUNTER_CLOCKWISE, 0, 20);
-    $.Toybox.Test.assertEqual(mockDc.drawArcCalls, 1);
-    
-    // 40 degree arc -> 3 segments (due to float division and +1). 
-    mockDc.drawArcCalls = 0;
-    FaceLogic.drawSafeArc(mockDc as $.Toybox.Graphics.Dc, 130, 130, 125, $.Toybox.Graphics.ARC_COUNTER_CLOCKWISE, 0, 40);
-    $.Toybox.Test.assertEqual(mockDc.drawArcCalls, 3);
-    
-    // Verify that the last segment's end angle includes the 0.5 overlap.
-    // 40.0 + 0.5 = 40.5
-    logger.debug("lastEnd: " + mockDc.lastEnd);
-    $.Toybox.Test.assertEqual(mockDc.lastEnd, 40.5);
-    
-    // 360 degree arc (full circle) -> (360/20) + 1 = 19 segments
-    mockDc.drawArcCalls = 0;
-    FaceLogic.drawSafeArc(mockDc as $.Toybox.Graphics.Dc, 130, 130, 125, $.Toybox.Graphics.ARC_COUNTER_CLOCKWISE, 0, 360);
-    $.Toybox.Test.assertEqual(mockDc.drawArcCalls, 19);
-    
-    return true;
-}
-
-//
-// Verify that clockwise arcs correctly calculate segments and apply negative overlap
-//
-(:test)
-function testDrawSafeArcClockwise(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    var mockDc = new MockDc();
-    
-    // 40 degree CW arc (e.g. 100 to 60) -> 3 segments
-    mockDc.drawArcCalls = 0;
-    FaceLogic.drawSafeArc(mockDc as $.Toybox.Graphics.Dc, 130, 130, 125, $.Toybox.Graphics.ARC_CLOCKWISE, 100, 60);
-    $.Toybox.Test.assertEqual(mockDc.drawArcCalls, 3);
-    
-    // End angle should be 60 - 0.5 = 59.5
-    var diff = mockDc.lastEnd - 59.5;
-    if (diff < 0) { diff = -diff; }
-    $.Toybox.Test.assert(diff < 0.001);
-    
-    return true;
-}
-
-//
 // Verify step ratio calculation under various edge cases
 //
 (:test)
@@ -164,19 +114,6 @@ function testAntiAliasShield(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Bo
 }
 
 //
-// Verify basic angle wrapping logic
-//
-(:test)
-function testWrapAngle(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(360).toFloat(), 0.0);
-    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(405).toFloat(), 45.0);
-    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(-45).toFloat(), 315.0);
-    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(0).toFloat(), 0.0);
-    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(180).toFloat(), 180.0);
-    return true;
-}
-
-//
 // Verify heart rate string formatting
 //
 (:test)
@@ -209,41 +146,49 @@ function testUpdateLogic(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolea
 }
 
 //
-// Verify angle wrapping with large or negative values
-//
-(:test)
-function testWrapAngleExtreme(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(720).toFloat(), 0.0);
-    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(-720).toFloat(), 0.0);
-    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(-1).toFloat(), 359.0);
-    $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(361).toFloat(), 1.0);
-    return true;
-}
-
-//
-// Verify that safe arcs handle the 360-degree full circle case
-//
-(:test)
-function testDrawSafeArcFullCircle(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    var mockDc = new MockDc();
-    
-    // Test that start=0, end=0 with CW/CCW handles correctly
-    // Our logic says if start != end and totalAngle == 0, it's a full circle (360)
-    mockDc.drawArcCalls = 0;
-    FaceLogic.drawSafeArc(mockDc as $.Toybox.Graphics.Dc, 130, 130, 125, $.Toybox.Graphics.ARC_COUNTER_CLOCKWISE, 0, 360);
-    $.Toybox.Test.assertEqual(mockDc.drawArcCalls, 19); // (360/20) + 1
-    
-    return true;
-}
-
-//
-// Verify build-side generated layout constants for Fenix 8 47mm
+// Verify that static layout constants are correctly loaded from the generator
 //
 (:test)
 function testLayoutConstants(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     // Verify Fenix 8 47mm (260x260) specific geometry
     $.Toybox.Test.assertEqual($.LayoutGenerated.CX, 130);
     $.Toybox.Test.assertEqual($.LayoutGenerated.CY, 130);
+    $.Toybox.Test.assertEqual($.LayoutGenerated.TIME_TRACKING, -14);
+    $.Toybox.Test.assertEqual($.LayoutGenerated.HR_ICON_W, 24);
+    return true;
+}
+
+//
+// Verify that the the throttled fallback logic only fires at appropriate intervals
+//
+(:test)
+function testThrottledFallback(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    var view = new FaceView();
+    var mockDc = new MockDc();
+    
+    // Initial state
+    $.Toybox.Test.assertEqual(view._lastFallbackMinute, -1);
+    
+    // Minute 1: Should fire
+    var time1 = $.Toybox.Time.Gregorian.info($.Toybox.Time.now(), $.Toybox.Time.FORMAT_SHORT);
+    time1.min = 1;
+    view.updateLongTermData(time1 as $.Toybox.System.ClockTime, mockDc as $.Toybox.Graphics.Dc);
+    
+    // Test Initial Fire
+    $.Toybox.Test.assertEqual(view._lastFallbackMinute, 1);
+    
+    // Minute 2: Should NOT fire
+    var time2 = $.Toybox.Time.Gregorian.info($.Toybox.Time.now(), $.Toybox.Time.FORMAT_SHORT);
+    time2.min = 2;
+    view.updateLongTermData(time2 as $.Toybox.System.ClockTime, mockDc as $.Toybox.Graphics.Dc);
+    $.Toybox.Test.assertEqual(view._lastFallbackMinute, 1);
+    
+    // Minute 5: Should fire
+    var time5 = $.Toybox.Time.Gregorian.info($.Toybox.Time.now(), $.Toybox.Time.FORMAT_SHORT);
+    time5.min = 5;
+    view.updateLongTermData(time5 as $.Toybox.System.ClockTime, mockDc as $.Toybox.Graphics.Dc);
+    $.Toybox.Test.assertEqual(view._lastFallbackMinute, 5);
+    
     return true;
 }
 

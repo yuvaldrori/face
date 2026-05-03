@@ -6,10 +6,8 @@ This document serves as the foundational mandate for the development and mainten
 
 The Fenix 8 Solar hardware utilizes a Memory-In-Pixel (MIP) display with a specific graphics driver that exhibits unique behaviors and bugs.
 
-### The "Orange Circle" Rendering Bug
-Directly calling `dc.drawArc()` with large spans or crossing the 0/360-degree boundary can trigger a hardware driver failure that renders a muddy "orange circle" artifact covering the entire arc track. To prevent this:
-- **Ultra-Granular Segments:** All arcs must be drawn using the `drawSafeArc` helper, which breaks segments into tiny **20-degree chunks**.
-- **Angle Wrapping:** All angles MUST be strictly wrapped to the `0-360` range before being passed to the hardware. Values like `405` (even for CCW arcs) will trigger artifacts.
+### The "Orange Circle" Rendering Bug (Historical Note)
+Directly calling `dc.drawArc()` with large spans or crossing the 0/360-degree boundary was previously reported to trigger a hardware driver failure that renders a muddy "orange circle" artifact. Per user request, the complex `drawSafeArc` segmentation logic has been removed in favor of direct API calls.
 - **Anti-Aliasing Management:** Shape primitives (arcs, circles, lines) must be drawn with `dc.setAntiAlias(false)` on the main display DC. Anti-aliasing on MIP shapes is the primary trigger for driver crashes and color corruption. 
     - **Note:** Do NOT call `setAntiAlias()` on paletted `BufferedBitmap` objects; these buffers do not support anti-aliasing and will throw an unhandled exception if the method is called.
 
@@ -37,9 +35,6 @@ To achieve a bold, screen-filling time display that exceeds standard font limits
 Research on actual fenix 8 hardware confirms that Focus Mode flags (like `focusMode == 1`) are not consistently exposed to third-party watch faces.
 - **The Standard Trigger:** Sleep visuals (dimming, hiding rings) must rely on the system `doNotDisturb` flag.
 - **Lifecycle Sync:** The `onEnterSleep()` and `onExitSleep()` callbacks provide the primary trigger for low-power state transitions, synced with the `_isSleepMode` state.
-
-### Ultra-Safe Arcs (Hardware Stability)
-... (keep existing drawSafeArc and anti-alias shield notes)
 
 ## 3. Automation & Spatial Math
 
