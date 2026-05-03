@@ -21,7 +21,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private var _batteryRatio as $.Toybox.Lang.Float = 0.0;
     private var _solarRatio as $.Toybox.Lang.Float = 0.0;
     private var _stepRatio as $.Toybox.Lang.Float = 0.0;
-    private var _isLowPower as $.Toybox.Lang.Boolean = true;
     public var _isSleepMode as $.Toybox.Lang.Boolean = false;
     
     private var _lastHrValue as $.Toybox.Lang.Number = -1;
@@ -95,7 +94,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         if (Toybox has :Complications) {
             Complications.registerComplicationChangeCallback(self.method(:onComplicationChanged));
             
-            _complicationSolar = new Complications.Id(Complications.COMPLICATION_TYPE_SOLAR_INTENSITY);
+            _complicationSolar = new Complications.Id(Complications.COMPLICATION_TYPE_SOLAR_INPUT);
             _complicationSteps = new Complications.Id(Complications.COMPLICATION_TYPE_STEPS);
             _complicationBattery = new Complications.Id(Complications.COMPLICATION_TYPE_BATTERY);
             _complicationHR = new Complications.Id(Complications.COMPLICATION_TYPE_HEART_RATE);
@@ -118,33 +117,25 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         var complication = Complications.getComplication(id);
         if (complication == null) { return; }
         
+        var val = complication.value;
+        if (val == null) { return; }
+
         if (id.equals(_complicationSolar)) {
-            var val = complication.value;
-            if (val != null) {
-                var floatVal = (val instanceof Float) ? val : val.toFloat();
-                var clampedIntensity = floatVal > FaceLogic.PERCENT_MAX ? FaceLogic.PERCENT_MAX : floatVal;
-                _solarRatio = clampedIntensity / FaceLogic.PERCENT_MAX;
-            }
+            var floatVal = (val instanceof Float) ? val as Float : (val as Number).toFloat();
+            var clampedIntensity = floatVal > FaceLogic.PERCENT_MAX ? FaceLogic.PERCENT_MAX : floatVal;
+            _solarRatio = clampedIntensity / FaceLogic.PERCENT_MAX;
         } else if (id.equals(_complicationSteps)) {
-            var val = complication.value;
-            if (val != null) {
-                var info = $.Toybox.ActivityMonitor.getInfo();
-                _stepRatio = FaceLogic.getStepRatio(val.toNumber(), info.stepGoal);
-            }
+            var info = $.Toybox.ActivityMonitor.getInfo();
+            _stepRatio = FaceLogic.getStepRatio((val as Number), info.stepGoal);
         } else if (id.equals(_complicationBattery)) {
-            var val = complication.value;
-            if (val != null) {
-                _batteryLevel = (val instanceof Float) ? val : val.toFloat();
-                _batteryRatio = _batteryLevel / FaceLogic.PERCENT_MAX;
-            }
+            var floatVal = (val instanceof Float) ? val as Float : (val as Number).toFloat();
+            _batteryLevel = floatVal;
+            _batteryRatio = _batteryLevel / FaceLogic.PERCENT_MAX;
         } else if (id.equals(_complicationHR)) {
-            var val = complication.value;
-            if (val != null) {
-                var hr = val.toNumber();
-                if (hr != _lastHrValue) {
-                    _lastHrValue = hr;
-                    _lastHrStr = FaceLogic.getHeartRateString(hr == -1 ? null : hr);
-                }
+            var hr = (val as Number);
+            if (hr != _lastHrValue) {
+                _lastHrValue = hr;
+                _lastHrStr = FaceLogic.getHeartRateString(hr == -1 ? null : hr);
             }
         }
         
@@ -373,6 +364,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         _stepRatio = FaceLogic.getStepRatio(info.steps, info.stepGoal);
     }
 
-    function onEnterSleep() as Void { _isLowPower = true; _lastUpdateMinute = -1; $.Toybox.WatchUi.requestUpdate(); }
-    function onExitSleep() as Void { _isLowPower = false; _lastUpdateMinute = -1; $.Toybox.WatchUi.requestUpdate(); }
+    function onEnterSleep() as Void { _lastUpdateMinute = -1; $.Toybox.WatchUi.requestUpdate(); }
+    function onExitSleep() as Void { _lastUpdateMinute = -1; $.Toybox.WatchUi.requestUpdate(); }
 }

@@ -335,9 +335,8 @@ function testSleepModeUI(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolea
 function testViewLifecycleSmoke(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     var view = new FaceView();
     
-    // Specifically test the method that caused the symbol-not-found crash
-    view.updateHeartRate();
-    view.updateSystemStats();
+    // Specifically test the fallback acquisition method
+    view.updateSystemStatsFallback();
     
     return true;
 }
