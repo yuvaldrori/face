@@ -260,7 +260,8 @@ function testPaletteCompleteness(logger as $.Toybox.Test.Logger) as $.Toybox.Lan
         FaceLogic.COLOR_WHITE,
         FaceLogic.COLOR_YELLOW,
         FaceLogic.COLOR_RED,
-        FaceLogic.COLOR_GREEN
+        FaceLogic.COLOR_GREEN,
+        FaceLogic.COLOR_CYAN
     ];
 
     for (var i = 0; i < required.size(); i++) {

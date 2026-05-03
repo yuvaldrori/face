@@ -17,6 +17,7 @@ module FaceLogic {
     const COLOR_YELLOW = $.Toybox.Graphics.COLOR_YELLOW as $.Toybox.Graphics.ColorValue;
     const COLOR_RED = $.Toybox.Graphics.COLOR_RED as $.Toybox.Graphics.ColorValue;
     const COLOR_GREEN = $.Toybox.Graphics.COLOR_GREEN as $.Toybox.Graphics.ColorValue;
+    const COLOR_CYAN = 0x00FFFF as $.Toybox.Graphics.ColorValue;
 
     // Constants for business logic
     const PERCENT_MAX = 100.0;
@@ -40,7 +41,8 @@ module FaceLogic {
             COLOR_WHITE,
             COLOR_YELLOW,
             COLOR_RED,
-            COLOR_GREEN
+            COLOR_GREEN,
+            COLOR_CYAN
         ];
     }
 
@@ -64,7 +66,7 @@ module FaceLogic {
     // Get color for steps ring
     //
     function getStepColor() as $.Toybox.Graphics.ColorValue {
-        return 0x00FFFF; // Cyan
+        return COLOR_CYAN;
     }
 
     //
