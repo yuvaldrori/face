@@ -228,9 +228,25 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
     private function drawDebugOverlay(dc as $.Toybox.Graphics.Dc) as Void {
         setAntiAliasSafe(dc, false);
+        dc.setPenWidth($.LayoutGenerated.PEN_WIDTH_DEBUG);
+        
+        // 1. Grid
         dc.setColor(FaceLogic.COLOR_RED, COLOR_BG);
         dc.drawLine(CX, 0, CX, $.LayoutGenerated.HEIGHT); 
         dc.drawLine(0, CY, $.LayoutGenerated.WIDTH, CY);
+
+        // 2. Ring Guides
+        dc.setColor(FaceLogic.COLOR_DK_GRAY, COLOR_BG);
+        dc.drawCircle(CX, CY, $.LayoutGenerated.RING_SOLAR_R);
+        dc.drawCircle(CX, CY, $.LayoutGenerated.RING_STEPS_R);
+        dc.drawCircle(CX, CY, $.LayoutGenerated.RING_BATT_R);
+
+        // 3. Text Bounding Box (HR)
+        dc.setColor(FaceLogic.COLOR_GREEN, COLOR_BG);
+        var hrTextW = dc.getTextWidthInPixels(_lastHrStr, FONT_SMALL);
+        var totalHrW = 24 + 8 + hrTextW;
+        var hrStartX = CX - (totalHrW / 2);
+        dc.drawRectangle(hrStartX, Y_HR, totalHrW, dc.getFontHeight(FONT_SMALL));
     }
 
     private function drawHeartIcon(dc as $.Toybox.Graphics.Dc, color as Number) as Void {
@@ -238,7 +254,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         var r = $.LayoutGenerated.HEART_LOBE_R;
         dc.fillCircle($.LayoutGenerated.HEART_LOBE_L_X, $.LayoutGenerated.HEART_LOBE_Y, r); 
         dc.fillCircle($.LayoutGenerated.HEART_LOBE_R_X, $.LayoutGenerated.HEART_LOBE_Y, r);
-        dc.fillPolygon($.LayoutGenerated.HEART_POLY);
+        dc.fillPolygon($.LayoutGenerated.HEART_POLY as Array<Array<Number>>);
     }
 
     public function updateHeartRate() as Void {
