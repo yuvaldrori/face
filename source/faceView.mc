@@ -162,40 +162,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         setAntiAliasSafe(dc, false);
         dc.clearClip();
         
-        var settings = $.Toybox.System.getDeviceSettings();
-        var inSleep = false;
-        
-        // 1. Check for fēnix 8 Focus Modes (API 5.1.0+)
-        // Value 1 corresponds to System.FOCUS_MODE_SLEEP
-        if (settings has :focusMode && settings.focusMode == 1) { inSleep = true; }
-        
-        // 2. Fallback to Do Not Disturb
-        if (!inSleep && settings has :doNotDisturb && settings.doNotDisturb) { inSleep = true; }
-        
-        // 3. Fallback to Sleep Schedule (Most robust for fēnix 8 quirks)
-        if (!inSleep) {
-            var profile = UserProfile.getProfile();
-            var sleepTime = profile has :sleepTime ? profile.sleepTime : null;
-            var wakeTime = profile has :wakeTime ? profile.wakeTime : null;
-            if (sleepTime != null && wakeTime != null) {
-                var now = $.Toybox.System.getClockTime();
-                var nowSec = now.hour * 3600 + now.min * 60;
-                var sSec = (sleepTime as Time.Duration).value();
-                var wSec = (wakeTime as Time.Duration).value();
-                
-                if (sSec < wSec) {
-                    if (nowSec >= sSec && nowSec < wSec) { inSleep = true; }
-                } else {
-                    if (nowSec >= sSec || nowSec < wSec) { inSleep = true; }
-                }
-            }
-        }
-
-        if (inSleep != _isSleepMode) {
-            _isSleepMode = inSleep;
-            _lastUpdateMinute = -1;
-        }
-
         var clockTime = $.Toybox.System.getClockTime();
         var isFullUpdate = FaceLogic.needsFullUpdate(_lastUpdateMinute, clockTime.min);
 
@@ -373,6 +339,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         _stepRatio = FaceLogic.getStepRatio(info.steps, info.stepGoal);
     }
 
-    function onEnterSleep() as Void { _lastUpdateMinute = -1; $.Toybox.WatchUi.requestUpdate(); }
-    function onExitSleep() as Void { _lastUpdateMinute = -1; $.Toybox.WatchUi.requestUpdate(); }
+    function onEnterSleep() as Void { _isSleepMode = true; _lastUpdateMinute = -1; $.Toybox.WatchUi.requestUpdate(); }
+    function onExitSleep() as Void { _isSleepMode = false; _lastUpdateMinute = -1; $.Toybox.WatchUi.requestUpdate(); }
 }
