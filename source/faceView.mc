@@ -165,24 +165,18 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.setPenWidth(RING_WIDTH);
 
         // 1. Solar Ring (Outer)
-        dc.setColor(FaceLogic.COLOR_DK_GRAY, COLOR_BG);
-        FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_SOLAR_R, Graphics.ARC_COUNTER_CLOCKWISE, 0, 360);
         if (_solarRatio > 0) {
             dc.setColor(FaceLogic.COLOR_YELLOW, COLOR_BG);
             FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_SOLAR_R, Graphics.ARC_COUNTER_CLOCKWISE, 90, (90 + (360 * _solarRatio)).toNumber());
         }
 
         // 2. Steps Ring (Middle)
-        dc.setColor(FaceLogic.COLOR_DK_GRAY, COLOR_BG);
-        FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_STEPS_R, Graphics.ARC_COUNTER_CLOCKWISE, 0, 360);
         if (_stepRatio > 0) {
             dc.setColor(0x00FFFF, COLOR_BG); // Cyan for Steps
             FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_STEPS_R, Graphics.ARC_COUNTER_CLOCKWISE, 90, (90 + (360 * _stepRatio)).toNumber());
         }
 
         // 3. Battery Ring (Inner)
-        dc.setColor(FaceLogic.COLOR_DK_GRAY, COLOR_BG);
-        FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_BATT_R, Graphics.ARC_COUNTER_CLOCKWISE, 0, 360);
         if (_batteryRatio > 0) {
             dc.setColor(getBatteryColor(_batteryLevel), COLOR_BG);
             FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_BATT_R, Graphics.ARC_COUNTER_CLOCKWISE, 90, (90 + (360 * _batteryRatio)).toNumber());

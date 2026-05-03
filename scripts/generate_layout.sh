@@ -8,22 +8,22 @@ MC_OUT="source/layoutGenerated.mc"
 CX=$(awk "BEGIN { print int($WIDTH / 2) }")
 CY=$(awk "BEGIN { print int($HEIGHT / 2) }")
 
-# Ring Configuration (Three heavy touching rings, moved in by 4px)
-RING_MARGIN=4
-RING_WIDTH=18
+# Ring Configuration (Three heavy touching rings, moved to half-radius)
+# Half radius of 130 is 65.
+MID_R=65
+RING_WIDTH=14
 # Ring 1: Outer (Solar)
-RING_SOLAR_R=$(awk "BEGIN { print int(130 - $RING_MARGIN - ($RING_WIDTH / 2)) }")
+RING_SOLAR_R=$(awk "BEGIN { print int($MID_R + $RING_WIDTH) }")
 # Ring 2: Middle (Steps)
-RING_STEPS_R=$(awk "BEGIN { print int($RING_SOLAR_R - $RING_WIDTH) }")
+RING_STEPS_R=$MID_R
 # Ring 3: Inner (Battery)
-RING_BATT_R=$(awk "BEGIN { print int($RING_STEPS_R - $RING_WIDTH) }")
+RING_BATT_R=$(awk "BEGIN { print int($MID_R - $RING_WIDTH) }")
 
 # Huge Vector Font Positioning
-# RobotoCondensedBold at 180px height
 HUGE_FONT_H=180
 Y_TIME=$(awk "BEGIN { print int($CY - ($HUGE_FONT_H / 2) - 10) }")
 
-# HR Positioning (Below Time center)
+# HR Positioning
 Y_HR=$(awk "BEGIN { print int($CY + 60) }")
 
 # HR Layout

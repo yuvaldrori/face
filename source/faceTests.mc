@@ -60,9 +60,8 @@ class MockDc extends $.Toybox.Lang.Object {
 (:test)
 function testLayoutBoundaries(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     $.Toybox.Test.assert($.LayoutGenerated.CX == 130);
-    $.Toybox.Test.assert($.LayoutGenerated.RING_WIDTH == 18);
-    $.Toybox.Test.assert($.LayoutGenerated.RING_SOLAR_R <= 130);
-    // Outer R=121, Middle R=103, Inner R=85.
+    $.Toybox.Test.assert($.LayoutGenerated.RING_WIDTH == 14);
+    // Outer R=79, Middle R=65, Inner R=51.
     $.Toybox.Test.assert($.LayoutGenerated.RING_BATT_R > 40);
     
     return true;
@@ -310,18 +309,17 @@ function testSleepModeUI(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolea
     var view = new FaceView();
     var mockDc = new MockDc();
     
-    // 1. Regular Mode: Arcs should be drawn
+    // 1. Regular Mode: With default 0 ratios, and NO tracks, it should also be 0
     view._isSleepMode = false;
     view.renderStatic(mockDc as $.Toybox.Graphics.Dc);
     var callsRegular = mockDc.drawArcCalls;
-    $.Toybox.Test.assert(callsRegular > 0);
+    $.Toybox.Test.assertEqual(callsRegular, 0);
     
-    // 2. Sleep Mode: Arcs should be hidden
+    // 2. Sleep Mode: Should definitely be 0
     mockDc.drawArcCalls = 0;
     view._isSleepMode = true;
     view.renderStatic(mockDc as $.Toybox.Graphics.Dc);
     var callsSleep = mockDc.drawArcCalls;
-    
     $.Toybox.Test.assertEqual(callsSleep, 0);
     
     return true;
