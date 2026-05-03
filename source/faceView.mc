@@ -48,8 +48,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     
     private const RING_WIDTH = $.LayoutGenerated.RING_WIDTH;
     
-    private const BATT_THRESHOLD_LOW = 20.0;
-
     // Static Background Buffer (Track arcs)
     private var _staticBuffer as $.Toybox.Graphics.BufferedBitmapReference? = null;
     private var _lastBufferMinute as $.Toybox.Lang.Number = -1;
@@ -199,7 +197,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     }
 
     public function getBatteryColor(level as $.Toybox.Lang.Float) as $.Toybox.Graphics.ColorValue {
-        return (level <= BATT_THRESHOLD_LOW) ? COLOR_HEART : FaceLogic.COLOR_GREEN;
+        return (level <= FaceLogic.BATT_THRESHOLD_LOW) ? COLOR_HEART : FaceLogic.COLOR_GREEN;
     }
 
     private function updateStaticBuffer() as Void {
@@ -250,7 +248,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         // Huge Scalable Time (Tight Tracking)
         var font = _hugeFont != null ? _hugeFont : $.Toybox.Graphics.FONT_NUMBER_THAI_HOT;
         var timeStr = Lang.format("$1$$2$", [_hour.format("%02d"), _min.format("%02d")]);
-        drawTightText(dc, CX, Y_TIME, font, timeStr, -14); // -14px tracking for 180px font
+        drawTightText(dc, CX, Y_TIME, font, timeStr, -14, $.DEBUG_ALIGNMENT);
         
         if (!_isSleepMode) {
             drawHeartIcon(dc, COLOR_HEART);
@@ -264,22 +262,30 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     //
     // Render text with custom character tracking (spacing)
     //
-    private function drawTightText(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, font as Object, text as String, tracking as Number) as Void {
+    private function drawTightText(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, font as Object, text as String, tracking as Number, debug as Boolean) as Void {
         var chars = text.toCharArray();
         var totalW = 0;
         var widths = new [chars.size()] as Array<Number>;
+        var vFont = font as Graphics.VectorFont;
         
         for (var i = 0; i < chars.size(); i++) {
             var s = chars[i].toString();
-            widths[i] = dc.getTextWidthInPixels(s, font as Graphics.VectorFont) as Number;
+            widths[i] = dc.getTextWidthInPixels(s, vFont) as Number;
             totalW += widths[i];
             if (i < chars.size() - 1) { totalW += tracking; }
         }
         
         var curX = (x - (totalW / 2)) as Number;
+        var fontH = dc.getFontHeight(vFont) as Number;
+
         for (var i = 0; i < chars.size(); i++) {
             var s = chars[i].toString();
-            dc.drawText(curX, y, font as Graphics.VectorFont, s, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
+            if (debug) {
+                dc.setColor(FaceLogic.COLOR_GREEN, COLOR_BG);
+                dc.drawRectangle(curX, y, widths[i] as Number, fontH);
+                dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
+            }
+            dc.drawText(curX, y, vFont, s, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
             curX += widths[i] + tracking;
         }
     }
@@ -308,28 +314,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         var totalHrW = 24 + 8 + hrTextW;
         var hrStartX = CX - (totalHrW / 2);
         dc.drawRectangle(hrStartX, Y_HR, totalHrW, dc.getFontHeight(FONT_SMALL));
-        
-        // Time Character Boxes
-        var font = _hugeFont != null ? _hugeFont : $.Toybox.Graphics.FONT_NUMBER_THAI_HOT;
-        var timeStr = Lang.format("$1$$2$", [_hour.format("%02d"), _min.format("%02d")]);
-        var chars = timeStr.toCharArray();
-        var tracking = -14;
-        var totalW = 0;
-        var widths = new [chars.size()] as Array<Number>;
-        var fontH = dc.getFontHeight(font as Graphics.VectorFont) as Number;
-        
-        for (var i = 0; i < chars.size(); i++) {
-            var s = chars[i].toString();
-            widths[i] = dc.getTextWidthInPixels(s, font as Graphics.VectorFont) as Number;
-            totalW += widths[i];
-            if (i < chars.size() - 1) { totalW += tracking; }
-        }
-        
-        var curX = (CX - (totalW / 2)) as Number;
-        for (var i = 0; i < chars.size(); i++) {
-            dc.drawRectangle(curX, Y_TIME, widths[i] as Number, fontH);
-            curX += widths[i] + tracking;
-        }
     }
 
     private function drawHeartIcon(dc as $.Toybox.Graphics.Dc, color as Number) as Void {

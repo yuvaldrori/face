@@ -20,6 +20,7 @@ module FaceLogic {
 
     // Constants for business logic
     const PERCENT_MAX = 100.0;
+    const BATT_THRESHOLD_LOW = 20.0;
     const ARC_SEGMENT_DEGREES = 20;
     const FULL_CIRCLE_DEGREES = 360;
 
