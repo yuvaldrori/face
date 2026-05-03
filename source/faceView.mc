@@ -228,7 +228,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
         // 2. Steps Ring (Middle)
         if (_stepRatio > 0) {
-            dc.setColor(0x00FFFF, COLOR_BG); // Cyan for Steps
+            dc.setColor(FaceLogic.getStepColor(), COLOR_BG);
             FaceLogic.drawSafeArc(dc, CX, CY, $.LayoutGenerated.RING_STEPS_R, Graphics.ARC_COUNTER_CLOCKWISE, 90, (90 + (360 * _stepRatio)).toNumber());
         }
 

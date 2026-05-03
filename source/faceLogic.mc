@@ -64,7 +64,7 @@ module FaceLogic {
     // Get color for steps ring
     //
     function getStepColor() as $.Toybox.Graphics.ColorValue {
-        return COLOR_LT_GRAY;
+        return 0x00FFFF; // Cyan
     }
 
     //
