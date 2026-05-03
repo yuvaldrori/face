@@ -11,6 +11,7 @@ import Toybox.Time;
 import Toybox.Time.Gregorian;
 import Toybox.Activity;
 import Toybox.Complications;
+import Toybox.UserProfile;
 
 class FaceView extends $.Toybox.WatchUi.WatchFace {
 
@@ -171,8 +172,24 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         // 2. Fallback to Do Not Disturb
         if (!inSleep && settings has :doNotDisturb && settings.doNotDisturb) { inSleep = true; }
         
-        // 3. Fallback to Night Mode
-        if (!inSleep && settings has :isNightModeEnabled && settings.isNightModeEnabled) { inSleep = true; }
+        // 3. Fallback to Sleep Schedule (Most robust for fēnix 8 quirks)
+        if (!inSleep) {
+            var profile = UserProfile.getProfile();
+            var sleepTime = profile has :sleepTime ? profile.sleepTime : null;
+            var wakeTime = profile has :wakeTime ? profile.wakeTime : null;
+            if (sleepTime != null && wakeTime != null) {
+                var now = $.Toybox.System.getClockTime();
+                var nowSec = now.hour * 3600 + now.min * 60;
+                var sSec = (sleepTime as Time.Duration).value();
+                var wSec = (wakeTime as Time.Duration).value();
+                
+                if (sSec < wSec) {
+                    if (nowSec >= sSec && nowSec < wSec) { inSleep = true; }
+                } else {
+                    if (nowSec >= sSec || nowSec < wSec) { inSleep = true; }
+                }
+            }
+        }
 
         if (inSleep != _isSleepMode) {
             _isSleepMode = inSleep;
@@ -200,7 +217,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
             renderStatic(dc);
         }
 
-        renderDynamicUI(dc, settings);
+        renderDynamicUI(dc);
         if ($.DEBUG_ALIGNMENT) { drawDebugOverlay(dc); }
     }
 
@@ -247,7 +264,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         }
     }
 
-    public function renderDynamicUI(dc as $.Toybox.Graphics.Dc, settings as $.Toybox.System.DeviceSettings) as Void {
+    public function renderDynamicUI(dc as $.Toybox.Graphics.Dc) as Void {
         setAntiAliasSafe(dc, true);
         
         var mainColor = _isSleepMode ? FaceLogic.COLOR_DK_GRAY : COLOR_MAIN;
@@ -263,30 +280,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
             dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
             dc.drawText($.LayoutGenerated.HR_TEXT_X, Y_HR, FONT_SMALL, _lastHrStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
         }
-
-        // TEMP DIAGNOSTICS: Remove after fix
-        var d = settings has :doNotDisturb ? (settings.doNotDisturb ? 1 : 0) : "N/A";
-        var info = $.Toybox.ActivityMonitor.getInfo();
-        var s = (info has :isSleepMode) ? (info.isSleepMode ? 1 : 0) : "N/A";
-        
-        var profile = $.Toybox.UserProfile.getProfile();
-        var st = "N/A";
-        var wt = "N/A";
-        var sleepTime = profile has :sleepTime ? profile.sleepTime : null;
-        var wakeTime = profile has :wakeTime ? profile.wakeTime : null;
-
-        if (sleepTime != null) {
-            st = (sleepTime as Time.Duration).value() / 3600;
-        }
-        if (wakeTime != null) {
-            wt = (wakeTime as Time.Duration).value() / 3600;
-        }
-        
-        var ciq = Lang.format("$1$.$2$.$3$", $.Toybox.System.getDeviceSettings().monkeyVersion);
-        
-        var diag = Lang.format("D:$1$ S:$2$ Sch:$3$-$4$ CIQ:$5$", [d, s, st, wt, ciq]);
-        dc.setColor(FaceLogic.COLOR_RED, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(CX, $.LayoutGenerated.HEIGHT - 25, Graphics.FONT_XTINY, diag, Graphics.TEXT_JUSTIFY_CENTER);
 
         setAntiAliasSafe(dc, false);
     }
