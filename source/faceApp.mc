@@ -21,7 +21,7 @@ class FaceApp extends $.Toybox.Application.AppBase {
         return [ new FaceView() ];
     }
 
-    function onSettingsChanged() {
+    function onSettingsChanged() as Void {
         $.Toybox.WatchUi.requestUpdate();
     }
 

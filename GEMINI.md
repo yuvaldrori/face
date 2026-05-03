@@ -7,7 +7,7 @@ This document serves as the foundational mandate for the development and mainten
 The Fenix 8 Solar hardware utilizes a Memory-In-Pixel (MIP) display with a specific graphics driver that exhibits unique behaviors and bugs.
 
 ### The "Orange Circle" Rendering Bug (Historical Note)
-Directly calling `dc.drawArc()` with large spans or crossing the 0/360-degree boundary was previously reported to trigger a hardware driver failure that renders a muddy "orange circle" artifact. Per user request, the complex `drawSafeArc` segmentation logic has been removed in favor of direct API calls.
+Directly calling `dc.drawArc()` with large spans or crossing the 0/360-degree boundary was previously reported to trigger a hardware driver failure that renders a muddy "orange circle" artifact. **Per user request, the complex `drawSafeArc` segmentation logic has been removed in favor of direct API calls.**
 - **Anti-Aliasing Management:** Shape primitives (arcs, circles, lines) must be drawn with `dc.setAntiAlias(false)` on the main display DC. Anti-aliasing on MIP shapes is the primary trigger for driver crashes and color corruption. 
     - **Note:** Do NOT call `setAntiAlias()` on paletted `BufferedBitmap` objects; these buffers do not support anti-aliasing and will throw an unhandled exception if the method is called.
 
@@ -19,17 +19,17 @@ The display palette is limited. To prevent UI elements (like the Clock) from "bi
 
 ## 2. Rendering Strategy & Optimization
 
-### Reactive Data Model (Complications API)
+### Reactive Data Model & Smart Redraw
 The watch face utilizes the **Toybox.Complications** API for primary data streams (Solar, Steps, Battery, Heart Rate). 
-- **Event-Driven:** Data is updated via the `onComplicationChanged` callback, eliminating the power cost of continuous polling.
-- **Immediate Redraw:** The App class implements `onSettingsChanged()` to trigger an immediate `requestUpdate()`. This ensures the UI reacts instantly to system toggles like **Do Not Disturb (DND)**.
-- **Fallback acquisition:** The `updateSystemStatsFallback()` method ensures data is populated immediately upon startup before the first complication event fires.
+- **Gaze-Activated Refresh:** To maximize battery life, background rings (Solar, Steps, Battery) are pre-rendered into a static buffer. This buffer is updated **only** when the user looks at the watch (`onExitSleep`) or when the minute changes.
+- **Selective Redraw:** Sensor updates received via `onComplicationChanged` only trigger a background buffer refresh if the watch is NOT in sleep mode.
+- **Throttled Fallback:** The `updateSystemStatsFallback()` method is throttled to **5-minute intervals** to prevent redundant CPU wakeups while ensuring data consistency.
 
-### Huge Vector Typography & Tracking
+### Huge Vector Typography & Caching
 To achieve a bold, screen-filling time display that exceeds standard font limits:
 - **Vector Fonts:** The time is rendered using `Graphics.getVectorFont` (RobotoCondensedBold) at **180px**.
-- **Custom Tracking (Kerning):** Character spacing is manually tightened using a custom rendering loop (e.g., **-14px** tracking). This ensures the "Huge" digits feel dense and centered.
-- **Consolidated Logic:** Rendering and debug overlay calculations MUST use the shared `drawTightText` helper to ensure visual and diagnostic synchronization.
+- **Custom Tracking (Kerning):** Character spacing is manually tightened using a custom rendering loop (e.g., **-14px** tracking via `$.LayoutGenerated.TIME_TRACKING`).
+- **Width Caching (Performance):** Vector font width calculations are computationally expensive. Character widths and total string dimensions are **cached once per minute** (or when the time string changes) to minimize per-frame overhead.
 
 ### The "Fenix 8 Solar Quirk": Sleep & Focus Detection
 Research on actual fenix 8 hardware confirms that Focus Mode flags (like `focusMode == 1`) are not consistently exposed to third-party watch faces.
@@ -40,25 +40,11 @@ Research on actual fenix 8 hardware confirms that Focus Mode flags (like `focusM
 
 The project uses a comprehensive `Makefile` to orchestrate the complex build and generation pipeline.
 
-### Core Targets
-- **`make help`**: Displays a comprehensive list of all available build targets and utilities.
-- **`make debug` / `make release`**: Standard builds. Automatically trigger the `generate` target first.
-- **`make debug-align` / `make run-align`**: Specialized builds that use `debug.jungle` to enable the Alignment Overlay. These are essential for visual verification on hardware.
-- **`make test`**: Builds and executes the unit test suite (`source/faceTests.mc`) in the simulator.
-- **`make profile`**: Enables the `-k` compiler flag for performance profiling, critical for ensuring the 30ms power budget is maintained.
-- **`make generate`**: Manually triggers the layout and weather string generation scripts.
-
 ### UI Generation & Static Layout
 To maintain peak performance, all UI layout constants MUST be managed via `scripts/generate_layout.sh`.
-- **Software Math Only:** The script must perform all geometric and trigonometric calculations using tools (e.g., `awk`). This includes icon dimensions, heart lobe centers, and ray offsets.
-- **Zero Runtime Math:** Source code (`source/`) MUST NOT perform layout-related arithmetic. All positions, dimensions, and static geometric structures (like the Heart Polygon) must be consumed as pre-calculated constants from `$.LayoutGenerated`.
+- **Zero Runtime Math:** Source code (`source/`) MUST NOT perform layout-related arithmetic. This includes character tracking, icon dimensions, heart lobe centers, and ray offsets. All such values must be consumed as pre-calculated constants from `$.LayoutGenerated`.
+- **Software Math Only:** The script must perform all geometric and trigonometric calculations using tools (e.g., `awk`). 
 - **No Magic Comments:** Never use manual calculations in comments to derive numbers. Every value must be programmatically derived from core display metrics or documented font heights.
-
-### Simulator Management
-The Makefile includes robust logic to manage the Garmin Simulator:
-- Automatically starts the simulator if it's not running.
-- Uses `ss` to wait for port `1234` to be ready before attempting to deploy a PRG.
-- Provides `check-sim` and `wait-sim` helpers for CI/CD environments.
 
 ## 4. Coding Standards
 
@@ -69,23 +55,20 @@ All contributions must strictly adhere to the [official Garmin Monkey C Coding C
 - **Architecture:** Always call the superclass `initialize()` method on the first line of any `initialize` function.
 - **Formatting:** Use 4-space indentation and same-line opening braces.
 - **Structure:** Maintain a strict "one class per file" policy.
+
 ## 5. Debug & Alignment
 
 The project maintains a professional-grade **Alignment Overlay** to verify geometric precision.
 - **Toggle:** Controlled via the `debug_on` / `debug_off` annotations in `monkey.jungle` and `debug.jungle`.
 - **Visibility:** Uses high-contrast `COLOR_RED` for crosshairs and **green bounding boxes** for character-level alignment. 
-- **Sync:** The debug bounding boxes for the "Huge" digits must be derived using the same `drawTightText` logic as the visual output to ensure absolute parity.
+- **Sync:** The debug bounding boxes for the "Huge" digits must be derived using the same cached width logic as the visual output to ensure absolute parity.
 
-## 6. Quality Assurance
+## 5. Quality Assurance
 
 - **Unit Tests:** `source/faceTests.mc` contains geometric validation, reactive logic, and palette integrity tests. 
+    - **`testThrottledFallback`**: formally verifies that system data refreshes are restricted to appropriate intervals.
     - **`testStepRatio`**: Validates the math for the Step ring, including null handling and goal over-achievement.
     - **`testPaletteCompleteness`**: Ensures all colors (including **Cyan**) are explicitly defined in the static buffer's 4-bit palette.
-    - **`testRequiredSymbols`**: Verifies the presence of the **Complications** module and its native type constants in the target environment.
 - **Memory Profiling:**
-...
-
-    - **`make heap-check`**: Runs the debug PRG in the simulator with the `-log` flag. This allows monitoring of peak memory usage. Aim to keep the watch face under **96KB** for maximum compatibility.
-- **Visual Alignment:**
-    - **`make run-align`**: Essential for verifying that bounding boxes correctly match the text offsets (e.g., `yTimeUp`).
+    - **`make heap-check`**: Runs the debug PRG in the simulator with the `-log` flag. Aim to keep the watch face under **96KB** for maximum compatibility.
 - **Target Verification:** Always validate changes on the actual `fenix8solar47mm` hardware. Drivers differ significantly even between 260x260 models.
