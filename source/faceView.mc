@@ -251,9 +251,27 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         var hrStartX = CX - (totalHrW / 2);
         dc.drawRectangle(hrStartX, Y_HR, totalHrW, dc.getFontHeight(FONT_SMALL));
         
-        // Time Vertical Span
-        dc.drawLine(0, Y_TIME, $.LayoutGenerated.WIDTH, Y_TIME);
-        dc.drawLine(0, Y_TIME + 180, $.LayoutGenerated.WIDTH, Y_TIME + 180);
+        // Time Character Boxes
+        var font = _hugeFont != null ? _hugeFont : $.Toybox.Graphics.FONT_NUMBER_THAI_HOT;
+        var timeStr = Lang.format("$1$$2$", [_hour.format("%02d"), _min.format("%02d")]);
+        var chars = timeStr.toCharArray();
+        var tracking = -14;
+        var totalW = 0;
+        var widths = new [chars.size()] as Array<Number>;
+        var fontH = dc.getFontHeight(font as Graphics.VectorFont) as Number;
+        
+        for (var i = 0; i < chars.size(); i++) {
+            var s = chars[i].toString();
+            widths[i] = dc.getTextWidthInPixels(s, font as Graphics.VectorFont) as Number;
+            totalW += widths[i];
+            if (i < chars.size() - 1) { totalW += tracking; }
+        }
+        
+        var curX = (CX - (totalW / 2)) as Number;
+        for (var i = 0; i < chars.size(); i++) {
+            dc.drawRectangle(curX, Y_TIME, widths[i] as Number, fontH);
+            curX += widths[i] + tracking;
+        }
     }
 
     private function drawHeartIcon(dc as $.Toybox.Graphics.Dc, color as Number) as Void {
