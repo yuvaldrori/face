@@ -200,7 +200,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
             renderStatic(dc);
         }
 
-        renderDynamicUI(dc);
+        renderDynamicUI(dc, settings);
         if ($.DEBUG_ALIGNMENT) { drawDebugOverlay(dc); }
     }
 
@@ -247,7 +247,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         }
     }
 
-    public function renderDynamicUI(dc as $.Toybox.Graphics.Dc) as Void {
+    public function renderDynamicUI(dc as $.Toybox.Graphics.Dc, settings as $.Toybox.System.DeviceSettings) as Void {
         setAntiAliasSafe(dc, true);
         
         var mainColor = _isSleepMode ? FaceLogic.COLOR_DK_GRAY : COLOR_MAIN;
@@ -263,6 +263,30 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
             dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
             dc.drawText($.LayoutGenerated.HR_TEXT_X, Y_HR, FONT_SMALL, _lastHrStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
         }
+
+        // TEMP DIAGNOSTICS: Remove after fix
+        var d = settings has :doNotDisturb ? (settings.doNotDisturb ? 1 : 0) : "N/A";
+        var info = $.Toybox.ActivityMonitor.getInfo();
+        var s = (info has :isSleepMode) ? (info.isSleepMode ? 1 : 0) : "N/A";
+        
+        var profile = $.Toybox.UserProfile.getProfile();
+        var st = "N/A";
+        var wt = "N/A";
+        var sleepTime = profile has :sleepTime ? profile.sleepTime : null;
+        var wakeTime = profile has :wakeTime ? profile.wakeTime : null;
+
+        if (sleepTime != null) {
+            st = (sleepTime as Time.Duration).value() / 3600;
+        }
+        if (wakeTime != null) {
+            wt = (wakeTime as Time.Duration).value() / 3600;
+        }
+        
+        var ciq = Lang.format("$1$.$2$.$3$", $.Toybox.System.getDeviceSettings().monkeyVersion);
+        
+        var diag = Lang.format("D:$1$ S:$2$ Sch:$3$-$4$ CIQ:$5$", [d, s, st, wt, ciq]);
+        dc.setColor(FaceLogic.COLOR_RED, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(CX, $.LayoutGenerated.HEIGHT - 25, Graphics.FONT_XTINY, diag, Graphics.TEXT_JUSTIFY_CENTER);
 
         setAntiAliasSafe(dc, false);
     }
