@@ -10,6 +10,7 @@ import Toybox.WatchUi;
 import Toybox.Time;
 import Toybox.Time.Gregorian;
 import Toybox.Activity;
+import Toybox.Complications;
 
 class FaceView extends $.Toybox.WatchUi.WatchFace {
 
@@ -27,6 +28,12 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private var _lastHrStr as $.Toybox.Lang.String = FaceLogic.STR_DASHES;
     private var _hour as $.Toybox.Lang.Number = 0;
     private var _min as $.Toybox.Lang.Number = 0;
+
+    // Complication IDs
+    private var _complicationSolar as Complications.Id? = null;
+    private var _complicationSteps as Complications.Id? = null;
+    private var _complicationBattery as Complications.Id? = null;
+    private var _complicationHR as Complications.Id? = null;
 
     // Layout Constants (Optimized for 260x260 MIP)
     private const CX = $.LayoutGenerated.CX; 
@@ -75,10 +82,73 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
             });
         }
         
+        initializeComplications();
         initializeStaticBuffer();
         var clockTime = $.Toybox.System.getClockTime();
         updateLongTermData(clockTime, dc);
-        updateHeartRate();
+    }
+
+    //
+    // Initialize Complications subscriptions
+    //
+    private function initializeComplications() as Void {
+        if (Toybox has :Complications) {
+            Complications.registerComplicationChangeCallback(self.method(:onComplicationChanged));
+            
+            _complicationSolar = new Complications.Id(Complications.COMPLICATION_TYPE_SOLAR_INTENSITY);
+            _complicationSteps = new Complications.Id(Complications.COMPLICATION_TYPE_STEPS);
+            _complicationBattery = new Complications.Id(Complications.COMPLICATION_TYPE_BATTERY);
+            _complicationHR = new Complications.Id(Complications.COMPLICATION_TYPE_HEART_RATE);
+
+            var ids = [_complicationSolar, _complicationSteps, _complicationBattery, _complicationHR];
+            for (var i = 0; i < ids.size(); i++) {
+                try {
+                    Complications.subscribeToUpdates(ids[i]);
+                } catch (e) {
+                    // Handle unsupported complication types
+                }
+            }
+        }
+    }
+
+    //
+    // Handle Complication Data Updates
+    //
+    function onComplicationChanged(id as Complications.Id) as Void {
+        var complication = Complications.getComplication(id);
+        if (complication == null) { return; }
+        
+        if (id.equals(_complicationSolar)) {
+            var val = complication.value;
+            if (val != null) {
+                var floatVal = (val instanceof Float) ? val : val.toFloat();
+                var clampedIntensity = floatVal > FaceLogic.PERCENT_MAX ? FaceLogic.PERCENT_MAX : floatVal;
+                _solarRatio = clampedIntensity / FaceLogic.PERCENT_MAX;
+            }
+        } else if (id.equals(_complicationSteps)) {
+            var val = complication.value;
+            if (val != null) {
+                var info = $.Toybox.ActivityMonitor.getInfo();
+                _stepRatio = FaceLogic.getStepRatio(val.toNumber(), info.stepGoal);
+            }
+        } else if (id.equals(_complicationBattery)) {
+            var val = complication.value;
+            if (val != null) {
+                _batteryLevel = (val instanceof Float) ? val : val.toFloat();
+                _batteryRatio = _batteryLevel / FaceLogic.PERCENT_MAX;
+            }
+        } else if (id.equals(_complicationHR)) {
+            var val = complication.value;
+            if (val != null) {
+                var hr = val.toNumber();
+                if (hr != _lastHrValue) {
+                    _lastHrValue = hr;
+                    _lastHrStr = FaceLogic.getHeartRateString(hr == -1 ? null : hr);
+                }
+            }
+        }
+        
+        $.Toybox.WatchUi.requestUpdate();
     }
 
     //
@@ -115,12 +185,9 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         var clockTime = $.Toybox.System.getClockTime();
         var isFullUpdate = FaceLogic.needsFullUpdate(_lastUpdateMinute, clockTime.min);
 
-        if (!_isLowPower) { updateHeartRate(); }
-
         if (isFullUpdate) {
             _lastUpdateMinute = clockTime.min;
             updateLongTermData(clockTime, dc);
-            if (_isLowPower) { updateHeartRate(); }
         }
 
         if (isFullUpdate || _staticBuffer == null || _lastBufferMinute != clockTime.min) {
@@ -209,11 +276,11 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private function drawTightText(dc as $.Toybox.Graphics.Dc, x as Number, y as Number, font as Object, text as String, tracking as Number) as Void {
         var chars = text.toCharArray();
         var totalW = 0;
-        var widths = new [chars.size()];
+        var widths = new [chars.size()] as Array<Number>;
         
         for (var i = 0; i < chars.size(); i++) {
             var s = chars[i].toString();
-            widths[i] = dc.getTextWidthInPixels(s, font as Graphics.VectorFont);
+            widths[i] = dc.getTextWidthInPixels(s, font as Graphics.VectorFont) as Number;
             totalW += widths[i];
             if (i < chars.size() - 1) { totalW += tracking; }
         }
@@ -284,25 +351,15 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.fillPolygon([[pts[0][0], pts[0][1]], [pts[1][0], pts[1][1]], [pts[2][0], pts[2][1]]]);
     }
 
-    public function updateHeartRate() as Void {
-        if ($.Toybox has :Activity) {
-            var activityInfo = $.Toybox.Activity.getActivityInfo();
-            var rate = (activityInfo != null) ? activityInfo.currentHeartRate : null as Number?;
-            var rateVal = (rate != null) ? rate as Number : -1;
-            if (rateVal != _lastHrValue) {
-                _lastHrValue = rateVal;
-                _lastHrStr = FaceLogic.getHeartRateString(rateVal == -1 ? null : rateVal);
-            }
-        }
-    }
-
     private function updateLongTermData(clockTime as $.Toybox.System.ClockTime, dc as $.Toybox.Graphics.Dc) as Void {
-        updateSystemStats();
         _hour = clockTime.hour as $.Toybox.Lang.Number;
         _min = clockTime.min as $.Toybox.Lang.Number;
+        
+        // Initial data fetch if complications haven't fired yet
+        if (_batteryRatio == 0.0) { updateSystemStatsFallback(); }
     }
 
-    public function updateSystemStats() as Void {
+    public function updateSystemStatsFallback() as Void {
         var stats = $.Toybox.System.getSystemStats();
         _batteryLevel = stats.battery;
         _batteryRatio = _batteryLevel / FaceLogic.PERCENT_MAX;
