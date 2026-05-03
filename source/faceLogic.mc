@@ -51,13 +51,6 @@ module FaceLogic {
     }
 
     //
-    // Format time string (HH:mm)
-    //
-    function getTimeString(hour as $.Toybox.Lang.Number, min as $.Toybox.Lang.Number) as $.Toybox.Lang.String {
-        return $.Toybox.Lang.format("$1$:$2$", [hour.toString(), min.format("%02d")]);
-    }
-
-    //
     // Calculate ratio of steps vs goal (clamped 0.0 to 1.0)
     //
     function getStepRatio(steps as Number?, goal as Number?) as Float {

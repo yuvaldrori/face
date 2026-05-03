@@ -121,6 +121,29 @@ function testDrawSafeArcClockwise(logger as $.Toybox.Test.Logger) as $.Toybox.La
 }
 
 //
+// Verify step ratio calculation under various edge cases
+//
+(:test)
+function testStepRatio(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    // 1. Normal case
+    $.Toybox.Test.assertEqual(FaceLogic.getStepRatio(5000, 10000), 0.5);
+    
+    // 2. Goal met exactly
+    $.Toybox.Test.assertEqual(FaceLogic.getStepRatio(10000, 10000), 1.0);
+    
+    // 3. Goal exceeded (should clamp to 1.0)
+    $.Toybox.Test.assertEqual(FaceLogic.getStepRatio(15000, 10000), 1.0);
+    
+    // 4. Null steps
+    $.Toybox.Test.assertEqual(FaceLogic.getStepRatio(null, 10000), 0.0);
+    
+    // 5. Zero goal
+    $.Toybox.Test.assertEqual(FaceLogic.getStepRatio(5000, 0), 0.0);
+    
+    return true;
+}
+
+//
 // Verify that static rendering paths (for buffers) do NOT attempt to toggle anti-aliasing
 //
 (:test)
@@ -141,21 +164,6 @@ function testAntiAliasShield(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Bo
 }
 
 //
-// Verify that solar intensity values are clamped appropriately
-//
-(:test)
-function testSolarIntensityClamping(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    var intensity = 150;
-    var clampedIntensity = (intensity > 100 ? 100.0 : intensity).toFloat();
-    $.Toybox.Test.assertEqual(clampedIntensity, 100.0);
-    
-    intensity = 50;
-    clampedIntensity = (intensity > 100 ? 100.0 : intensity).toFloat();
-    $.Toybox.Test.assertEqual(clampedIntensity, 50.0);
-    return true;
-}
-
-//
 // Verify basic angle wrapping logic
 //
 (:test)
@@ -165,16 +173,6 @@ function testWrapAngle(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean 
     $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(-45).toFloat(), 315.0);
     $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(0).toFloat(), 0.0);
     $.Toybox.Test.assertEqual(FaceLogic.wrapAngle(180).toFloat(), 180.0);
-    return true;
-}
-
-//
-// Verify time string formatting (HH:mm)
-//
-(:test)
-function testTimeString(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    $.Toybox.Test.assertEqual(FaceLogic.getTimeString(13, 5), "13:05");
-    $.Toybox.Test.assertEqual(FaceLogic.getTimeString(0, 0), "0:00");
     return true;
 }
 
@@ -289,13 +287,13 @@ function testRequiredSymbols(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Bo
     $.Toybox.Test.assert($.Toybox has :System);
     $.Toybox.Test.assert($.Toybox has :Graphics);
     $.Toybox.Test.assert($.Toybox has :Time);
-    $.Toybox.Test.assert($.Toybox has :Activity);
+    $.Toybox.Test.assert($.Toybox has :Complications);
 
-    // 2. Critical Properties
-    var activityInfo = $.Toybox.Activity.getActivityInfo();
-    if (activityInfo != null) {
-        $.Toybox.Test.assert(activityInfo has :currentHeartRate);
-    }
+    // 2. Critical Complication Constants
+    $.Toybox.Test.assert($.Toybox.Complications has :COMPLICATION_TYPE_SOLAR_INPUT);
+    $.Toybox.Test.assert($.Toybox.Complications has :COMPLICATION_TYPE_STEPS);
+    $.Toybox.Test.assert($.Toybox.Complications has :COMPLICATION_TYPE_BATTERY);
+    $.Toybox.Test.assert($.Toybox.Complications has :COMPLICATION_TYPE_HEART_RATE);
     
     // 3. System Stats
     var stats = $.Toybox.System.getSystemStats();

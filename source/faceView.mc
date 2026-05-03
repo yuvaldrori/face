@@ -115,31 +115,31 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     //
     function onComplicationChanged(id as Complications.Id) as Void {
         var complication = Complications.getComplication(id);
-        if (complication == null) { return; }
-        
-        var val = complication.value;
-        if (val == null) { return; }
-
-        if (id.equals(_complicationSolar)) {
-            var floatVal = (val instanceof Float) ? val as Float : (val as Number).toFloat();
-            var clampedIntensity = floatVal > FaceLogic.PERCENT_MAX ? FaceLogic.PERCENT_MAX : floatVal;
-            _solarRatio = clampedIntensity / FaceLogic.PERCENT_MAX;
-        } else if (id.equals(_complicationSteps)) {
-            var info = $.Toybox.ActivityMonitor.getInfo();
-            _stepRatio = FaceLogic.getStepRatio((val as Number), info.stepGoal);
-        } else if (id.equals(_complicationBattery)) {
-            var floatVal = (val instanceof Float) ? val as Float : (val as Number).toFloat();
-            _batteryLevel = floatVal;
-            _batteryRatio = _batteryLevel / FaceLogic.PERCENT_MAX;
-        } else if (id.equals(_complicationHR)) {
-            var hr = (val as Number);
-            if (hr != _lastHrValue) {
-                _lastHrValue = hr;
-                _lastHrStr = FaceLogic.getHeartRateString(hr == -1 ? null : hr);
+        if (complication != null) {
+            var val = complication.value;
+            if (val != null) {
+                if (id.equals(_complicationSolar)) {
+                    var floatVal = (val instanceof Float) ? val as Float : (val as Number).toFloat();
+                    var clampedIntensity = floatVal > FaceLogic.PERCENT_MAX ? FaceLogic.PERCENT_MAX : floatVal;
+                    _solarRatio = clampedIntensity / FaceLogic.PERCENT_MAX;
+                } else if (id.equals(_complicationSteps)) {
+                    var info = $.Toybox.ActivityMonitor.getInfo();
+                    _stepRatio = FaceLogic.getStepRatio((val as Number), info.stepGoal);
+                } else if (id.equals(_complicationBattery)) {
+                    var floatVal = (val instanceof Float) ? val as Float : (val as Number).toFloat();
+                    _batteryLevel = floatVal;
+                    _batteryRatio = _batteryLevel / FaceLogic.PERCENT_MAX;
+                } else if (id.equals(_complicationHR)) {
+                    var hr = (val as Number);
+                    if (hr != _lastHrValue) {
+                        _lastHrValue = hr;
+                        _lastHrStr = FaceLogic.getHeartRateString(hr == -1 ? null : hr);
+                    }
+                }
+                
+                $.Toybox.WatchUi.requestUpdate();
             }
         }
-        
-        $.Toybox.WatchUi.requestUpdate();
     }
 
     //
