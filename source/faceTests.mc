@@ -224,6 +224,33 @@ function testPaletteCompleteness(logger as $.Toybox.Test.Logger) as $.Toybox.Lan
 }
 
 //
+// Verify FaceRenderer primitives directly
+//
+(:test)
+function testFaceRenderer(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    var mockDc = new MockDc();
+    
+    // 1. Test Ring Arc
+    FaceRenderer.drawRingArc(mockDc as $.Toybox.Graphics.Dc, 100, 0.5, $.Toybox.Graphics.COLOR_RED, 130, 130);
+    $.Toybox.Test.assertEqual(mockDc.drawArcCalls, 1);
+    $.Toybox.Test.assertEqual(mockDc.lastStart, 90);
+    $.Toybox.Test.assertEqual(mockDc.lastEnd, 270.0); // 90 + 360*0.5
+    
+    // 2. Test Heart Icon
+    mockDc.drawArcCalls = 0; // Reset just in case, though heart uses fillCircle/fillPolygon
+    FaceRenderer.drawHeartIcon(mockDc as $.Toybox.Graphics.Dc, $.Toybox.Graphics.COLOR_RED);
+    // Success is not crashing and executing the calls (could add counters to fillCircle in MockDc)
+    
+    // 3. Test Tight Text
+    var widths = [10, 10, 10];
+    FaceRenderer.drawCachedTightText(mockDc as $.Toybox.Graphics.Dc, 130, 130, :mockFont, "123", widths, 30, -2, false, $.Toybox.Graphics.COLOR_WHITE);
+    $.Toybox.Test.assertEqual(mockDc.drawTextItems.size(), 3);
+    $.Toybox.Test.assertEqual(mockDc.drawTextItems[0], "1");
+    
+    return true;
+}
+
+//
 // Verify that all assumed SDK properties and modules exist in the target environment.
 // This prevents runtime "Symbol Not Found" crashes.
 //
@@ -273,14 +300,32 @@ function testSleepModeUI(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolea
 }
 
 //
+// Verify FaceComplications fallback acquisition
+//
+(:test)
+function testFaceComplicationsFallback(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    var comps = new FaceComplications();
+    
+    // Test that the method runs without crashing in test environment
+    comps.updateSystemStatsFallback();
+    
+    // In test environment, system stats might be zeroed out or fixed,
+    // but we verify the method is accessible and populates internal state.
+    $.Toybox.Test.assert(comps.batteryLevel != null);
+    
+    return true;
+}
+
+//
 // Smoke test for the View lifecycle: Verify that data acquisition logic does not crash
 //
 (:test)
 function testViewLifecycleSmoke(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     var view = new FaceView();
     
-    // Specifically test the fallback acquisition method
-    view.updateSystemStatsFallback();
+    // Verify that the view's internal data controller is accessible and works
+    // (We use the public method in FaceView which now delegates to _data)
+    view.updateLongTermData($.Toybox.Time.Gregorian.info($.Toybox.Time.now(), $.Toybox.Time.FORMAT_SHORT) as $.Toybox.System.ClockTime, new MockDc() as $.Toybox.Graphics.Dc);
     
     return true;
 }
