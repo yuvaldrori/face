@@ -13,7 +13,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
     // Lifecycle and state tracking
     private var _lastUpdateMinute as $.Toybox.Lang.Number = -1;
-    private var _hasAntiAlias as $.Toybox.Lang.Boolean = false;
     private var _batteryLevel as $.Toybox.Lang.Float = 0.0;
     private var _batteryRatio as $.Toybox.Lang.Float = 0.0;
     private var _solarRatio as $.Toybox.Lang.Float = 0.0;
@@ -57,7 +56,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
     function initialize() {
         WatchFace.initialize();
-        _hasAntiAlias = ($.Toybox.Graphics has :setAntiAlias);
         _lastHrStr = FaceLogic.STR_DASHES;
     }
 
@@ -65,21 +63,17 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Helper to safely set anti-aliasing if supported
     //
     private function setAntiAliasSafe(dc as $.Toybox.Graphics.Dc, enable as $.Toybox.Lang.Boolean) as Void {
-        if (_hasAntiAlias) {
-            dc.setAntiAlias(enable);
-        }
+        dc.setAntiAlias(enable);
     }
 
     //
     // Set up UI component dimensions and initial data
     //
     function onLayout(dc as $.Toybox.Graphics.Dc) as Void {
-        if ($.Toybox.Graphics has :getVectorFont) {
-            _hugeFont = $.Toybox.Graphics.getVectorFont({
-                :face => "RobotoCondensedBold",
-                :size => $.LayoutGenerated.HUGE_FONT_SIZE
-            });
-        }
+        _hugeFont = $.Toybox.Graphics.getVectorFont({
+            :face => "RobotoCondensedBold",
+            :size => $.LayoutGenerated.HUGE_FONT_SIZE
+        });
         
         initializeComplications();
         initializeStaticBuffer();
@@ -91,23 +85,19 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Initialize Complications subscriptions
     //
     private function initializeComplications() as Void {
-        if (Toybox has :Complications) {
-            Complications.registerComplicationChangeCallback(self.method(:onComplicationChanged));
-            
-            _complicationSolar = new Complications.Id(Complications.COMPLICATION_TYPE_SOLAR_INPUT);
-            _complicationSteps = new Complications.Id(Complications.COMPLICATION_TYPE_STEPS);
-            _complicationBattery = new Complications.Id(Complications.COMPLICATION_TYPE_BATTERY);
-            _complicationHR = new Complications.Id(Complications.COMPLICATION_TYPE_HEART_RATE);
+        Complications.registerComplicationChangeCallback(self.method(:onComplicationChanged));
+        
+        _complicationSolar = new Complications.Id(Complications.COMPLICATION_TYPE_SOLAR_INPUT);
+        _complicationSteps = new Complications.Id(Complications.COMPLICATION_TYPE_STEPS);
+        _complicationBattery = new Complications.Id(Complications.COMPLICATION_TYPE_BATTERY);
+        _complicationHR = new Complications.Id(Complications.COMPLICATION_TYPE_HEART_RATE);
 
-            var ids = [_complicationSolar, _complicationSteps, _complicationBattery, _complicationHR];
-            for (var i = 0; i < ids.size(); i++) {
-                try {
-                    Complications.subscribeToUpdates(ids[i]);
-                } catch (e) {
-                    if ($.Toybox.System has :println) {
-                        $.Toybox.System.println("Complication sub failed: " + ids[i] + " (" + e.getErrorMessage() + ")");
-                    }
-                }
+        var ids = [_complicationSolar, _complicationSteps, _complicationBattery, _complicationHR];
+        for (var i = 0; i < ids.size(); i++) {
+            try {
+                Complications.subscribeToUpdates(ids[i]);
+            } catch (e) {
+                $.Toybox.System.println("Complication sub failed: " + ids[i] + " (" + e.getErrorMessage() + ")");
             }
         }
     }
@@ -159,13 +149,11 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     //
     private function initializeStaticBuffer() as Void {
         if (_staticBuffer != null && _staticBuffer.get() != null) { return; }
-        if ($.Toybox.Graphics has :createBufferedBitmap) {
-            _staticBuffer = $.Toybox.Graphics.createBufferedBitmap({
-                :width => $.LayoutGenerated.WIDTH,
-                :height => $.LayoutGenerated.HEIGHT,
-                :palette => FaceLogic.getRequiredPalette()
-            });
-        }
+        _staticBuffer = $.Toybox.Graphics.createBufferedBitmap({
+            :width => $.LayoutGenerated.WIDTH,
+            :height => $.LayoutGenerated.HEIGHT,
+            :palette => FaceLogic.getRequiredPalette()
+        });
     }
 
     //
@@ -183,7 +171,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
             
             // Check DND status once a minute (or when settings change)
             var settings = $.Toybox.System.getDeviceSettings();
-            var inSleep = (settings has :doNotDisturb && settings.doNotDisturb);
+            var inSleep = settings.doNotDisturb;
             if (inSleep != _isSleepMode) {
                 _isSleepMode = inSleep;
             }
@@ -354,7 +342,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         _batteryLevel = stats.battery;
         _batteryRatio = _batteryLevel / FaceLogic.PERCENT_MAX;
         
-        var intensity = (stats has :solarIntensity) ? stats.solarIntensity : 0;
+        var intensity = stats.solarIntensity;
         if (intensity == null) { intensity = 0; }
         var clampedIntensity = intensity > FaceLogic.PERCENT_MAX ? FaceLogic.PERCENT_MAX : intensity;
         _solarRatio = clampedIntensity / FaceLogic.PERCENT_MAX;
