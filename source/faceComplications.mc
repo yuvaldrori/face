@@ -40,7 +40,14 @@ class FaceComplications {
             try {
                 Complications.subscribeToUpdates(ids[i]);
             } catch (e) {
-                $.Toybox.System.println("Complication sub failed: " + ids[i] + " (" + e.getErrorMessage() + ")");
+                if ($.Toybox.System has :println) {
+                    var msg = e.getErrorMessage();
+                    if (msg != null && msg.find("Permission") != null) {
+                        $.Toybox.System.println("Permission Denied: Complication " + ids[i]);
+                    } else {
+                        $.Toybox.System.println("Subscription Failed: " + ids[i] + " (" + (msg != null ? msg : "Unknown Error") + ")");
+                    }
+                }
             }
         }
     }
@@ -54,27 +61,25 @@ class FaceComplications {
         if (val == null) { return; }
 
         if (id.equals(_idSolar)) {
-            var floatVal = (val as Numeric).toFloat();
-            var clampedIntensity = floatVal > FaceLogic.PERCENT_MAX ? FaceLogic.PERCENT_MAX : floatVal;
-            solarRatio = clampedIntensity / FaceLogic.PERCENT_MAX;
+            solarRatio = $.FaceLogic.getSolarRatio(val as $.Toybox.Lang.Numeric);
             needsBackgroundRedraw = true;
         } else if (id.equals(_idSteps)) {
             var info = $.Toybox.ActivityMonitor.getInfo();
             if (info != null) {
-                stepRatio = FaceLogic.getStepRatio(val as Numeric, info.stepGoal);
+                stepRatio = $.FaceLogic.getStepRatio(val as $.Toybox.Lang.Numeric, info.stepGoal);
             } else {
                 stepRatio = 0.0;
             }
             needsBackgroundRedraw = true;
         } else if (id.equals(_idBattery)) {
-            batteryLevel = (val as Numeric).toFloat();
-            batteryRatio = batteryLevel / FaceLogic.PERCENT_MAX;
+            batteryLevel = (val as $.Toybox.Lang.Numeric).toFloat();
+            batteryRatio = batteryLevel / $.FaceLogic.PERCENT_MAX;
             needsBackgroundRedraw = true;
         } else if (id.equals(_idHR)) {
-            var hr = (val as Number);
+            var hr = (val as $.Toybox.Lang.Number);
             if (hr != hrValue) {
                 hrValue = hr;
-                hrStr = FaceLogic.getHeartRateString(hr == -1 ? null : hr);
+                hrStr = $.FaceLogic.getHeartRateString(hr == -1 ? null : hr);
             }
         }
         
@@ -87,16 +92,13 @@ class FaceComplications {
     public function updateSystemStatsFallback() as Void {
         var stats = $.Toybox.System.getSystemStats();
         batteryLevel = stats.battery;
-        batteryRatio = batteryLevel / FaceLogic.PERCENT_MAX;
+        batteryRatio = batteryLevel / $.FaceLogic.PERCENT_MAX;
         
-        var intensity = stats.solarIntensity;
-        if (intensity == null) { intensity = 0; }
-        var clampedIntensity = intensity > FaceLogic.PERCENT_MAX ? FaceLogic.PERCENT_MAX : intensity;
-        solarRatio = clampedIntensity / FaceLogic.PERCENT_MAX;
+        solarRatio = $.FaceLogic.getSolarRatio(stats.solarIntensity);
 
         var info = $.Toybox.ActivityMonitor.getInfo();
         if (info != null) {
-            stepRatio = FaceLogic.getStepRatio(info.steps, info.stepGoal);
+            stepRatio = $.FaceLogic.getStepRatio(info.steps, info.stepGoal);
         } else {
             stepRatio = 0.0;
         }

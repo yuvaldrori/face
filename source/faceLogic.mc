@@ -8,15 +8,15 @@ import Toybox.Graphics;
 
 module FaceLogic {
     
-    // Hardware-verified Palette Constants
+    // Hardware-verified Palette Constants (Saturated for MIP)
     const COLOR_BLACK = $.Toybox.Graphics.COLOR_BLACK as $.Toybox.Graphics.ColorValue;
     const COLOR_DK_GRAY = $.Toybox.Graphics.COLOR_DK_GRAY as $.Toybox.Graphics.ColorValue;
     const COLOR_LT_GRAY = $.Toybox.Graphics.COLOR_LT_GRAY as $.Toybox.Graphics.ColorValue;
     const COLOR_WHITE = $.Toybox.Graphics.COLOR_WHITE as $.Toybox.Graphics.ColorValue;
-    const COLOR_YELLOW = $.Toybox.Graphics.COLOR_YELLOW as $.Toybox.Graphics.ColorValue;
-    const COLOR_RED = $.Toybox.Graphics.COLOR_RED as $.Toybox.Graphics.ColorValue;
-    const COLOR_GREEN = $.Toybox.Graphics.COLOR_GREEN as $.Toybox.Graphics.ColorValue;
-    const COLOR_CYAN = 0x00FFFF as $.Toybox.Graphics.ColorValue;
+    const COLOR_YELLOW = 0xFFAA00 as $.Toybox.Graphics.ColorValue; // Amber/Gold
+    const COLOR_RED = 0xAA0000 as $.Toybox.Graphics.ColorValue;    // Primary Red
+    const COLOR_GREEN = 0x00AA00 as $.Toybox.Graphics.ColorValue;  // Primary Green
+    const COLOR_CYAN = 0x00AAFF as $.Toybox.Graphics.ColorValue;   // Vivid Blue/Teal
 
     // Constants for business logic
     const PERCENT_MAX = 100.0;
@@ -32,7 +32,7 @@ module FaceLogic {
     //
     // Get the required 16-color palette for the static background buffer
     //
-    function getRequiredPalette() as Array<$.Toybox.Graphics.ColorValue> {
+    function getRequiredPalette() as $.Toybox.Lang.Array<$.Toybox.Graphics.ColorValue> {
         return [
             COLOR_BLACK,
             COLOR_DK_GRAY,
@@ -42,7 +42,14 @@ module FaceLogic {
             COLOR_RED,
             COLOR_GREEN,
             COLOR_CYAN
-        ];
+        ] as $.Toybox.Lang.Array<$.Toybox.Graphics.ColorValue>;
+    }
+
+    //
+    // Format hour and minute into a 4-digit string (e.g. 0905)
+    //
+    function getTimeString(hour as $.Toybox.Lang.Number, min as $.Toybox.Lang.Number) as $.Toybox.Lang.String {
+        return $.Toybox.Lang.format("$1$$2$", [hour.format("%02d"), min.format("%02d")]);
     }
 
     //
@@ -53,9 +60,19 @@ module FaceLogic {
     }
 
     //
+    // Calculate ratio of solar intensity (clamped 0.0 to 1.0)
+    //
+    function getSolarRatio(intensity as $.Toybox.Lang.Numeric?) as $.Toybox.Lang.Float {
+        if (intensity == null) { return 0.0; }
+        var floatVal = intensity.toFloat();
+        if (floatVal < 0) { return 0.0; }
+        return (floatVal > PERCENT_MAX) ? 1.0 : (floatVal / PERCENT_MAX);
+    }
+
+    //
     // Calculate ratio of steps vs goal (clamped 0.0 to 1.0)
     //
-    function getStepRatio(steps as Numeric?, goal as Numeric?) as Float {
+    function getStepRatio(steps as $.Toybox.Lang.Numeric?, goal as $.Toybox.Lang.Numeric?) as $.Toybox.Lang.Float {
         if (steps == null || goal == null || goal == 0) { return 0.0; }
         var ratio = steps.toFloat() / goal.toFloat();
         return (ratio > 1.0) ? 1.0 : ratio;

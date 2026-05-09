@@ -44,17 +44,11 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private var _staticBuffer as $.Toybox.Graphics.BufferedBitmapReference? = null;
     private var _lastBufferMinute as $.Toybox.Lang.Number = -1;
     private var _hugeFont as $.Toybox.Graphics.VectorFont? = null;
+    private var _hugeFontHeight as $.Toybox.Lang.Number = 0;
 
     function initialize() {
         WatchFace.initialize();
         _data = new FaceComplications();
-    }
-
-    //
-    // Helper to safely set anti-aliasing if supported
-    //
-    private function setAntiAliasSafe(dc as $.Toybox.Graphics.Dc, enable as $.Toybox.Lang.Boolean) as Void {
-        dc.setAntiAlias(enable);
     }
 
     //
@@ -65,6 +59,9 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
             :face => "RobotoCondensedBold",
             :size => $.LayoutGenerated.HUGE_FONT_SIZE
         });
+        
+        var font = _hugeFont != null ? _hugeFont : $.Toybox.Graphics.FONT_NUMBER_THAI_HOT;
+        _hugeFontHeight = dc.getFontHeight(font);
         
         initializeStaticBuffer();
         var clockTime = $.Toybox.System.getClockTime();
@@ -87,11 +84,11 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Main Rendering Loop (1Hz Update)
     //
     function onUpdate(dc as $.Toybox.Graphics.Dc) as Void {
-        setAntiAliasSafe(dc, false);
+        dc.setAntiAlias(false);
         dc.clearClip();
         
         var clockTime = $.Toybox.System.getClockTime();
-        var isFullUpdate = FaceLogic.needsFullUpdate(_lastUpdateMinute, clockTime.min);
+        var isFullUpdate = $.FaceLogic.needsFullUpdate(_lastUpdateMinute, clockTime.min);
 
         if (isFullUpdate) {
             _lastUpdateMinute = clockTime.min;
@@ -126,7 +123,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     }
 
     public function getBatteryColor(level as $.Toybox.Lang.Float) as $.Toybox.Graphics.ColorValue {
-        return (level <= FaceLogic.BATT_THRESHOLD_LOW) ? COLOR_HEART : FaceLogic.COLOR_GREEN;
+        return (level <= $.FaceLogic.BATT_THRESHOLD_LOW) ? COLOR_HEART : $.FaceLogic.COLOR_GREEN;
     }
 
     private function updateStaticBuffer() as Void {
@@ -138,11 +135,13 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     }
 
     public function renderStatic(dc as $.Toybox.Graphics.Dc) as Void {
+        // Use fillRectangle for a more robust clear on MIP drivers
         dc.setColor(COLOR_BG, COLOR_BG);
-        dc.clear();
+        dc.fillRectangle(0, 0, $.LayoutGenerated.WIDTH, $.LayoutGenerated.HEIGHT);
         
         if (!_isSleepMode) {
             renderAllRings(dc);
+            $.FaceRenderer.drawHeartIcon(dc, COLOR_HEART);
         }
     }
 
@@ -150,66 +149,70 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.setPenWidth(RING_WIDTH);
         
         // 1. Solar Ring (Outer)
-        FaceRenderer.drawRingArc(dc, $.LayoutGenerated.RING_SOLAR_R, _data.solarRatio, FaceLogic.COLOR_YELLOW, CX, CY);
+        $.FaceRenderer.drawRingArc(dc, $.LayoutGenerated.RING_SOLAR_R, _data.solarRatio, $.FaceLogic.COLOR_YELLOW, CX, CY);
         
         // 2. Steps Ring (Middle)
-        FaceRenderer.drawRingArc(dc, $.LayoutGenerated.RING_STEPS_R, _data.stepRatio, FaceLogic.getStepColor(), CX, CY);
+        $.FaceRenderer.drawRingArc(dc, $.LayoutGenerated.RING_STEPS_R, _data.stepRatio, $.FaceLogic.getStepColor(), CX, CY);
         
         // 3. Battery Ring (Inner)
-        FaceRenderer.drawRingArc(dc, $.LayoutGenerated.RING_BATT_R, _data.batteryRatio, getBatteryColor(_data.batteryLevel), CX, CY);
+        $.FaceRenderer.drawRingArc(dc, $.LayoutGenerated.RING_BATT_R, _data.batteryRatio, getBatteryColor(_data.batteryLevel), CX, CY);
+    }
+
+    private function updateTimeMetrics(dc as $.Toybox.Graphics.Dc, timeStr as $.Toybox.Lang.String, font as $.Toybox.Graphics.FontDefinition or $.Toybox.Graphics.VectorFont) as Void {
+        _lastTimeStr = timeStr;
+        var chars = timeStr.toCharArray();
+        _timeWidths = new [chars.size()] as $.Toybox.Lang.Array<$.Toybox.Lang.Number>;
+        _timeTotalW = 0;
+        for (var i = 0; i < chars.size(); i++) {
+            var charStr = chars[i].toString();
+            _timeWidths[i] = dc.getTextWidthInPixels(charStr, font) as $.Toybox.Lang.Number;
+            _timeTotalW += _timeWidths[i];
+            if (i < chars.size() - 1) { _timeTotalW += $.LayoutGenerated.TIME_TRACKING; }
+        }
     }
 
     public function renderDynamicUI(dc as $.Toybox.Graphics.Dc) as Void {
-        setAntiAliasSafe(dc, true);
-        
-        var mainColor = _isSleepMode ? FaceLogic.COLOR_DK_GRAY : COLOR_MAIN;
-        dc.setColor(mainColor, $.Toybox.Graphics.COLOR_TRANSPARENT);
+        dc.setAntiAlias(true);
 
-        // Huge Scalable Time (Tight Tracking)
+        var mainColor = _isSleepMode ? $.FaceLogic.COLOR_DK_GRAY : COLOR_MAIN;
         var font = _hugeFont != null ? _hugeFont : $.Toybox.Graphics.FONT_NUMBER_THAI_HOT;
-        var timeStr = Lang.format("$1$$2$", [_hour.format("%02d"), _min.format("%02d")]);
+        var timeStr = $.FaceLogic.getTimeString(_hour, _min);
         
+        // Ensure metrics are up to date if time changed
         if (!timeStr.equals(_lastTimeStr)) {
-            _lastTimeStr = timeStr;
-            var chars = timeStr.toCharArray();
-            _timeWidths = new [chars.size()] as Array<Number>;
-            _timeTotalW = 0;
-            for (var i = 0; i < chars.size(); i++) {
-                _timeWidths[i] = dc.getTextWidthInPixels(chars[i].toString(), font) as Number;
-                _timeTotalW += _timeWidths[i];
-                if (i < chars.size() - 1) { _timeTotalW += $.LayoutGenerated.TIME_TRACKING; }
-            }
+            updateTimeMetrics(dc, timeStr, font);
         }
 
-        FaceRenderer.drawCachedTightText(dc, CX, Y_TIME, font, timeStr, _timeWidths, _timeTotalW, $.LayoutGenerated.TIME_TRACKING, $.DEBUG_ALIGNMENT, mainColor);
-        
-        if (!_isSleepMode) {
-            FaceRenderer.drawHeartIcon(dc, COLOR_HEART);
-            dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
-            dc.drawText($.LayoutGenerated.HR_TEXT_X, Y_HR, FONT_SMALL, _data.hrStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
+        $.FaceRenderer.drawCachedTightText(dc, CX, Y_TIME, font, timeStr, _timeWidths, _timeTotalW, $.LayoutGenerated.TIME_TRACKING, $.DEBUG_ALIGNMENT, mainColor, _hugeFontHeight);
+
+        if (_isSleepMode) { 
+            dc.setAntiAlias(false);
+            return; 
         }
 
-        setAntiAliasSafe(dc, false);
+        dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
+        dc.drawText($.LayoutGenerated.HR_TEXT_X, Y_HR, FONT_SMALL, _data.hrStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
+        dc.setAntiAlias(false);
     }
 
     private function drawDebugOverlay(dc as $.Toybox.Graphics.Dc) as Void {
-        setAntiAliasSafe(dc, false);
+        dc.setAntiAlias(false);
         dc.setPenWidth($.LayoutGenerated.PEN_WIDTH_DEBUG);
         
         // 1. Grid & Screen Edge
-        dc.setColor(FaceLogic.COLOR_RED, COLOR_BG);
+        dc.setColor($.FaceLogic.COLOR_RED, COLOR_BG);
         dc.drawLine(CX, 0, CX, $.LayoutGenerated.HEIGHT); 
         dc.drawLine(0, CY, $.LayoutGenerated.WIDTH, CY);
         dc.drawCircle(CX, CY, $.LayoutGenerated.SCREEN_R);
 
         // 2. Ring Guides (Centers)
-        dc.setColor(FaceLogic.COLOR_DK_GRAY, COLOR_BG);
+        dc.setColor($.FaceLogic.COLOR_DK_GRAY, COLOR_BG);
         dc.drawCircle(CX, CY, $.LayoutGenerated.RING_SOLAR_R);
         dc.drawCircle(CX, CY, $.LayoutGenerated.RING_STEPS_R);
         dc.drawCircle(CX, CY, $.LayoutGenerated.RING_BATT_R);
 
         // 3. Data Boundaries (Green)
-        dc.setColor(FaceLogic.COLOR_GREEN, COLOR_BG);
+        dc.setColor($.FaceLogic.COLOR_GREEN, COLOR_BG);
         
         // HR Group
         var hrTextW = dc.getTextWidthInPixels(_data.hrStr, FONT_SMALL);

@@ -8,8 +8,10 @@ The Fenix 8 Solar hardware utilizes a Memory-In-Pixel (MIP) display with a speci
 
 ### The "Orange Circle" Rendering Bug (Historical Note)
 Directly calling `dc.drawArc()` with large spans or crossing the 0/360-degree boundary was previously reported to trigger a hardware driver failure that renders a muddy "orange circle" artifact. **Per user request, the complex `drawSafeArc` segmentation logic has been removed in favor of direct API calls.**
-- **Anti-Aliasing Management:** Shape primitives (arcs, circles, lines) must be drawn with `dc.setAntiAlias(false)` on the main display DC. Anti-aliasing on MIP shapes is the primary trigger for driver crashes and color corruption. 
-    - **Note:** Do NOT call `setAntiAlias()` on paletted `BufferedBitmap` objects; these buffers do not support anti-aliasing and will throw an unhandled exception if the method is called.
+- **Anti-Aliasing Management:** 
+    - **Main DC:** Shape primitives (arcs, circles, lines) must be drawn with `dc.setAntiAlias(false)`. However, **Vector Fonts** MUST use `dc.setAntiAlias(true)` on the Main DC to ensure smooth edges at large scales (180px).
+    - **Buffer DC:** Do NOT call `setAntiAlias()` on paletted `BufferedBitmap` objects; these buffers do not support anti-aliasing and will throw an unhandled exception.
+- **Rendering Strategy for Text:** To prevent "biting" and jagged edges, large vector fonts (Time display) MUST be rendered to the **Main DC** using `COLOR_TRANSPARENT`. Do not attempt to render large vector fonts into paletted buffers as they lose transparency support and anti-aliasing.
 
 ### UI Layering & "Biting"
 The display palette is limited. To prevent UI elements (like the Clock) from "biting" into or overwriting the side arcs:
