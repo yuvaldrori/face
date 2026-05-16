@@ -24,7 +24,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     public var _timeTotalW as $.Toybox.Lang.Number = 0;
 
     // Data Controller
-    private var _data as FaceComplications;
+    public var _data as FaceComplications;
 
     // Layout Constants (Optimized for 260x260 MIP)
     private const CX = $.LayoutGenerated.CX; 
@@ -146,16 +146,16 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     }
 
     private function renderAllRings(dc as $.Toybox.Graphics.Dc) as Void {
-        dc.setPenWidth(RING_WIDTH);
+        // Apply horizontal clip to straighten the top edges of the rings
+        dc.setClip(0, $.LayoutGenerated.RING_CLIP_Y, $.LayoutGenerated.WIDTH, $.LayoutGenerated.HEIGHT - $.LayoutGenerated.RING_CLIP_Y);
         
-        // 1. Solar Ring (Outer)
-        $.FaceRenderer.drawRingArc(dc, $.LayoutGenerated.RING_SOLAR_R, _data.solarRatio, $.FaceLogic.COLOR_YELLOW, CX, CY);
+        // 1. Battery Ring (Outer)
+        $.FaceRenderer.drawRingArc(dc, $.LayoutGenerated.RING_BATT_R, _data.batteryRatio, getBatteryColor(_data.batteryLevel), CX, CY, RING_WIDTH);
         
-        // 2. Steps Ring (Middle)
-        $.FaceRenderer.drawRingArc(dc, $.LayoutGenerated.RING_STEPS_R, _data.stepRatio, $.FaceLogic.getStepColor(), CX, CY);
+        // 2. Steps Ring (Inner)
+        $.FaceRenderer.drawRingArc(dc, $.LayoutGenerated.RING_STEPS_R, _data.stepRatio, $.FaceLogic.getStepColor(), CX, CY, RING_WIDTH);
         
-        // 3. Battery Ring (Inner)
-        $.FaceRenderer.drawRingArc(dc, $.LayoutGenerated.RING_BATT_R, _data.batteryRatio, getBatteryColor(_data.batteryLevel), CX, CY);
+        dc.clearClip();
     }
 
     private function updateTimeMetrics(dc as $.Toybox.Graphics.Dc, timeStr as $.Toybox.Lang.String, font as $.Toybox.Graphics.FontDefinition or $.Toybox.Graphics.VectorFont) as Void {
@@ -192,6 +192,11 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
         dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
         dc.drawText($.LayoutGenerated.HR_TEXT_X, Y_HR, FONT_SMALL, _data.hrStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
+        
+        // Temperature Only
+        dc.setColor(mainColor, $.Toybox.Graphics.COLOR_TRANSPARENT);
+        dc.drawText($.LayoutGenerated.TEMP_X, $.LayoutGenerated.Y_WEATHER, FONT_SMALL, _data.tempStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
+
         dc.setAntiAlias(false);
     }
 
@@ -207,9 +212,8 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
         // 2. Ring Guides (Centers)
         dc.setColor($.FaceLogic.COLOR_DK_GRAY, COLOR_BG);
-        dc.drawCircle(CX, CY, $.LayoutGenerated.RING_SOLAR_R);
-        dc.drawCircle(CX, CY, $.LayoutGenerated.RING_STEPS_R);
         dc.drawCircle(CX, CY, $.LayoutGenerated.RING_BATT_R);
+        dc.drawCircle(CX, CY, $.LayoutGenerated.RING_STEPS_R);
 
         // 3. Data Boundaries (Green)
         dc.setColor($.FaceLogic.COLOR_GREEN, COLOR_BG);
@@ -219,6 +223,24 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         var totalHrW = $.LayoutGenerated.HR_ICON_W + $.LayoutGenerated.HR_GAP + hrTextW;
         var hrStartX = CX - (totalHrW / 2);
         dc.drawRectangle(hrStartX, Y_HR, totalHrW, dc.getFontHeight(FONT_SMALL));
+
+        // Temperature Group
+        var tempTextW = dc.getTextWidthInPixels(_data.tempStr, FONT_SMALL);
+        var tempStartX = CX - (tempTextW / 2);
+        dc.drawRectangle(tempStartX, $.LayoutGenerated.Y_WEATHER, tempTextW, dc.getFontHeight(FONT_SMALL));
+
+        // 4. Touch Targets (Cyan/Blue)
+        dc.setColor($.FaceLogic.COLOR_CYAN, COLOR_BG);
+        
+        // HR Touch Target
+        var hrTouchW = $.LayoutGenerated.TOUCH_HR_W;
+        var hrTouchH = $.LayoutGenerated.TOUCH_HR_H;
+        dc.drawRectangle(CX - hrTouchW/2, Y_HR, hrTouchW, hrTouchH);
+
+        // Temp Touch Target
+        var tempTouchW = $.LayoutGenerated.TOUCH_TEMP_W;
+        var tempTouchH = $.LayoutGenerated.TOUCH_TEMP_H;
+        dc.drawRectangle(CX - tempTouchW/2, $.LayoutGenerated.Y_WEATHER, tempTouchW, tempTouchH);
     }
 
     public function updateLongTermData(clockTime as $.Toybox.System.ClockTime, dc as $.Toybox.Graphics.Dc) as Void {

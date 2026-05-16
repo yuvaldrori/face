@@ -21,13 +21,18 @@ module FaceLogic {
     // Constants for business logic
     const PERCENT_MAX = 100.0;
     const BATT_THRESHOLD_LOW = 20.0;
-    const ARC_SEGMENT_DEGREES = 20;
-    const FULL_CIRCLE_DEGREES = 360;
 
     const STR_EMPTY = "";
     const STR_DASHES = "--";
     const STR_TEMP_DASHES = "--°";
     const STR_SPACE = " ";
+
+    //
+    // Format temperature as a string
+    //
+    function getTempString(temp as $.Toybox.Lang.Numeric?) as $.Toybox.Lang.String {
+        return (temp != null ? temp.toNumber().toString() + "°" : STR_TEMP_DASHES);
+    }
 
     //
     // Get the required 16-color palette for the static background buffer

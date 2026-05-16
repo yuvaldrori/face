@@ -16,7 +16,7 @@ TEST_PRG = bin/face-test.prg
 # Build flags
 COMMON_FLAGS = -d $(DEVICE) -y $(DEVELOPER_KEY) -w -l 3
 
-.PHONY: help all debug release clean run simulator test check-sim wait-sim generate
+.PHONY: help all debug release clean run simulator test check-sim wait-sim generate run-align
 
 all: debug
 

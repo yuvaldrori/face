@@ -30,13 +30,21 @@ module FaceRenderer {
     }
 
     //
-    // Draw a ring arc based on ratio
+    // Draw a ring arc based on ratio within the bottom arc bounds
     //
-    function drawRingArc(dc as $.Toybox.Graphics.Dc, radius as $.Toybox.Lang.Number, ratio as $.Toybox.Lang.Float, color as $.Toybox.Graphics.ColorValue, cx as $.Toybox.Lang.Number, cy as $.Toybox.Lang.Number) as Void {
+    function drawRingArc(dc as $.Toybox.Graphics.Dc, radius as $.Toybox.Lang.Number, ratio as $.Toybox.Lang.Float, color as $.Toybox.Graphics.ColorValue, cx as $.Toybox.Lang.Number, cy as $.Toybox.Lang.Number, width as $.Toybox.Lang.Number) as Void {
         if (ratio <= 0) { return; }
         dc.setColor(color, $.FaceLogic.COLOR_BLACK);
-        var endAngle = 90 + (360 * ratio);
-        dc.drawArc(cx, cy, radius, $.Toybox.Graphics.ARC_COUNTER_CLOCKWISE, 90, endAngle.toNumber());
+        dc.setPenWidth(1);
+        var start = $.LayoutGenerated.ARC_START;
+        var end = $.LayoutGenerated.ARC_END;
+        var span = end - start;
+        var currentEnd = start + (span * ratio);
+        
+        var hw = width / 2;
+        for (var i = -hw; i < (width - hw); i++) {
+            dc.drawArc(cx, cy, radius + i, $.Toybox.Graphics.ARC_COUNTER_CLOCKWISE, start, currentEnd.toNumber());
+        }
     }
 
     //

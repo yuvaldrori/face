@@ -18,7 +18,8 @@ class FaceApp extends $.Toybox.Application.AppBase {
 
     // Return the initial view of your application here
     function getInitialView() as [$.Toybox.WatchUi.Views] or [$.Toybox.WatchUi.Views, $.Toybox.WatchUi.InputDelegates] {
-        return [ new FaceView() ];
+        var view = new FaceView();
+        return [ view, new FaceDelegate(view) ];
     }
 
     function onSettingsChanged() as Void {

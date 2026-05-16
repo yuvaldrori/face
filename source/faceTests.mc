@@ -53,6 +53,8 @@ class MockDc extends $.Toybox.Lang.Object {
         lastBgColor = b;
     }
     function setPenWidth(w as $.Toybox.Lang.Number) as Void {}
+    function setClip(x as $.Toybox.Lang.Number, y as $.Toybox.Lang.Number, w as $.Toybox.Lang.Number, h as $.Toybox.Lang.Number) as Void {}
+    function clearClip() as Void {}
     function clear() as Void {
         clearCalls++;
     }
@@ -71,12 +73,31 @@ class MockDc extends $.Toybox.Lang.Object {
 (:test)
 function testLayoutBoundaries(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     $.Toybox.Test.assert($.LayoutGenerated.CX == 130);
-    $.Toybox.Test.assert($.LayoutGenerated.RING_WIDTH == 14);
-    // Outer R=126, Middle R=112, Inner R=98.
-    $.Toybox.Test.assert($.LayoutGenerated.RING_SOLAR_R == 126);
-    $.Toybox.Test.assert($.LayoutGenerated.RING_BATT_R == 98);
-    // Y_HR at 175, clears ring inner edge (221 at bottom)
-    $.Toybox.Test.assert($.LayoutGenerated.Y_HR == 175);
+    $.Toybox.Test.assert($.LayoutGenerated.RING_WIDTH == 12);
+    // Outer R=120, Inner R=106 (120 - 12 - 2).
+    $.Toybox.Test.assert($.LayoutGenerated.RING_BATT_R == 120);
+    $.Toybox.Test.assert($.LayoutGenerated.RING_STEPS_R == 106);
+    $.Toybox.Test.assert($.LayoutGenerated.RING_CLIP_Y == 190);
+    
+    return true;
+}
+
+//
+// Verify touch target hitbox sanity and consistency with LayoutGenerated
+//
+(:test)
+function testTouchTargets(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    // 1. HR Touch Target sanity
+    $.Toybox.Test.assert($.LayoutGenerated.TOUCH_HR_W > 20);
+    $.Toybox.Test.assert($.LayoutGenerated.TOUCH_HR_H > 20);
+    
+    // 2. Temperature Touch Target sanity
+    $.Toybox.Test.assert($.LayoutGenerated.TOUCH_TEMP_W > 20);
+    $.Toybox.Test.assert($.LayoutGenerated.TOUCH_TEMP_H > 20);
+    
+    // 3. Ensure targets are centered
+    // We don't have X positions in LayoutGenerated for the target itself, 
+    // but we can verify the dimensions are positive and non-zero.
     
     return true;
 }
@@ -412,10 +433,10 @@ function testFaceRenderer(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boole
     var mockDc = new MockDc();
     
     // 1. Test Ring Arc
-    $.FaceRenderer.drawRingArc(mockDc as $.Toybox.Graphics.Dc, 100, 0.5, $.Toybox.Graphics.COLOR_RED, 130, 130);
-    $.Toybox.Test.assertEqual(mockDc.drawArcCalls, 1);
-    $.Toybox.Test.assertEqual(mockDc.lastStart, 90);
-    $.Toybox.Test.assertEqual(mockDc.lastEnd, 270.0); // 90 + 360*0.5
+    $.FaceRenderer.drawRingArc(mockDc as $.Toybox.Graphics.Dc, 100, 0.5, $.Toybox.Graphics.COLOR_RED, 130, 130, 12);
+    $.Toybox.Test.assertEqual(mockDc.drawArcCalls, 12);
+    $.Toybox.Test.assertEqual(mockDc.lastStart, 200);
+    $.Toybox.Test.assertEqual(mockDc.lastEnd, 270.0); // 200 + 140*0.5
     
     // 2. Test Heart Icon
     mockDc.drawArcCalls = 0; // Reset just in case, though heart uses fillCircle/fillPolygon
