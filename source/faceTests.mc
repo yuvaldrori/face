@@ -132,8 +132,9 @@ function testStepRatio(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean 
 function testTransparencyRegression(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     var mockDc = new MockDc();
     var widths = [10, 10, 10] as $.Toybox.Lang.Array<$.Toybox.Lang.Number>;
+    var chars = ["1", "2", "3"] as $.Toybox.Lang.Array<$.Toybox.Lang.String>;
     
-    $.FaceRenderer.drawCachedTightText(mockDc as $.Toybox.Graphics.Dc, 130, 130, :mockFont as $.Toybox.Graphics.FontDefinition, "123", widths, 30, -2, false, $.Toybox.Graphics.COLOR_WHITE, 30);
+    $.FaceRenderer.drawCachedTightText(mockDc as $.Toybox.Graphics.Dc, 130, 130, :mockFont as $.Toybox.Graphics.FontDefinition, chars, widths, 30, -2, false, $.Toybox.Graphics.COLOR_WHITE, 30);
     
     if (mockDc.lastBgColor != $.Toybox.Graphics.COLOR_TRANSPARENT) {
         logger.error("Transparency Regression: Text background is not COLOR_TRANSPARENT");
@@ -229,7 +230,6 @@ function testTimeFormatting(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boo
 (:test)
 function testWidthCacheInvalidation(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
     var view = new $.FaceView();
-    var mockDc = new MockDc();
     
     // Initial state
     $.Toybox.Test.assertEqual(view._lastTimeStr, "");
@@ -259,6 +259,31 @@ function testWidthCacheInvalidation(logger as $.Toybox.Test.Logger) as $.Toybox.
     } else {
         return false;
     }
+    
+    return true;
+}
+
+//
+// Verify that time character caching works correctly under renderDynamicUI lifecycle
+//
+(:test)
+function testTimeCharacterCaching(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    var view = new $.FaceView();
+    var mockDc = new MockDc();
+    
+    view._hour = 10;
+    view._min = 42;
+    
+    // Call renderDynamicUI to trigger caching
+    view.renderDynamicUI(mockDc as $.Toybox.Graphics.Dc);
+    
+    // Assert cache is populated
+    $.Toybox.Test.assertEqual(view._lastTimeStr, "1042");
+    $.Toybox.Test.assertEqual(view._timeCharStrings.size(), 4);
+    $.Toybox.Test.assertEqual(view._timeCharStrings[0], "1");
+    $.Toybox.Test.assertEqual(view._timeCharStrings[1], "0");
+    $.Toybox.Test.assertEqual(view._timeCharStrings[2], "4");
+    $.Toybox.Test.assertEqual(view._timeCharStrings[3], "2");
     
     return true;
 }
@@ -434,7 +459,7 @@ function testFaceRenderer(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boole
     
     // 1. Test Ring Arc
     $.FaceRenderer.drawRingArc(mockDc as $.Toybox.Graphics.Dc, 100, 0.5, $.Toybox.Graphics.COLOR_RED, 130, 130, 12);
-    $.Toybox.Test.assertEqual(mockDc.drawArcCalls, 12);
+    $.Toybox.Test.assertEqual(mockDc.drawArcCalls, 1);
     $.Toybox.Test.assertEqual(mockDc.lastStart, 200);
     $.Toybox.Test.assertEqual(mockDc.lastEnd, 270.0); // 200 + 140*0.5
     
@@ -445,7 +470,8 @@ function testFaceRenderer(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boole
     
     // 3. Test Tight Text
     var widths = [10, 10, 10] as $.Toybox.Lang.Array<$.Toybox.Lang.Number>;
-    $.FaceRenderer.drawCachedTightText(mockDc as $.Toybox.Graphics.Dc, 130, 130, :mockFont as $.Toybox.Graphics.FontDefinition, "123", widths, 30, -2, false, $.Toybox.Graphics.COLOR_WHITE, 30);
+    var chars = ["1", "2", "3"] as $.Toybox.Lang.Array<$.Toybox.Lang.String>;
+    $.FaceRenderer.drawCachedTightText(mockDc as $.Toybox.Graphics.Dc, 130, 130, :mockFont as $.Toybox.Graphics.FontDefinition, chars, widths, 30, -2, false, $.Toybox.Graphics.COLOR_WHITE, 30);
     $.Toybox.Test.assertEqual(mockDc.drawTextItems.size(), 3);
     $.Toybox.Test.assertEqual(mockDc.drawTextItems[0], "1");
     

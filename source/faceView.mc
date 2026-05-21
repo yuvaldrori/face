@@ -21,6 +21,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
 
     public var _lastTimeStr as $.Toybox.Lang.String = "";
     public var _timeWidths as $.Toybox.Lang.Array<$.Toybox.Lang.Number> = [] as $.Toybox.Lang.Array<$.Toybox.Lang.Number>;
+    public var _timeCharStrings as $.Toybox.Lang.Array<$.Toybox.Lang.String> = [] as $.Toybox.Lang.Array<$.Toybox.Lang.String>;
     public var _timeTotalW as $.Toybox.Lang.Number = 0;
 
     // Data Controller
@@ -161,13 +162,16 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private function updateTimeMetrics(dc as $.Toybox.Graphics.Dc, timeStr as $.Toybox.Lang.String, font as $.Toybox.Graphics.FontDefinition or $.Toybox.Graphics.VectorFont) as Void {
         _lastTimeStr = timeStr;
         var chars = timeStr.toCharArray();
-        _timeWidths = new [chars.size()] as $.Toybox.Lang.Array<$.Toybox.Lang.Number>;
+        var size = chars.size();
+        _timeWidths = new [size] as $.Toybox.Lang.Array<$.Toybox.Lang.Number>;
+        _timeCharStrings = new [size] as $.Toybox.Lang.Array<$.Toybox.Lang.String>;
         _timeTotalW = 0;
-        for (var i = 0; i < chars.size(); i++) {
+        for (var i = 0; i < size; i++) {
             var charStr = chars[i].toString();
+            _timeCharStrings[i] = charStr;
             _timeWidths[i] = dc.getTextWidthInPixels(charStr, font) as $.Toybox.Lang.Number;
             _timeTotalW += _timeWidths[i];
-            if (i < chars.size() - 1) { _timeTotalW += $.LayoutGenerated.TIME_TRACKING; }
+            if (i < size - 1) { _timeTotalW += $.LayoutGenerated.TIME_TRACKING; }
         }
     }
 
@@ -183,7 +187,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
             updateTimeMetrics(dc, timeStr, font);
         }
 
-        $.FaceRenderer.drawCachedTightText(dc, CX, Y_TIME, font, timeStr, _timeWidths, _timeTotalW, $.LayoutGenerated.TIME_TRACKING, $.DEBUG_ALIGNMENT, mainColor, _hugeFontHeight);
+        $.FaceRenderer.drawCachedTightText(dc, CX, Y_TIME, font, _timeCharStrings, _timeWidths, _timeTotalW, $.LayoutGenerated.TIME_TRACKING, $.DEBUG_ALIGNMENT, mainColor, _hugeFontHeight);
 
         if (_isSleepMode) { 
             dc.setAntiAlias(false);
