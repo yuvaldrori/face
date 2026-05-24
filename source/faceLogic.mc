@@ -65,21 +65,13 @@ module FaceLogic {
     }
 
     //
-    // Calculate ratio of solar intensity (clamped 0.0 to 1.0)
-    //
-    function getSolarRatio(intensity as $.Toybox.Lang.Numeric?) as $.Toybox.Lang.Float {
-        if (intensity == null) { return 0.0; }
-        var floatVal = intensity.toFloat();
-        if (floatVal < 0) { return 0.0; }
-        return (floatVal > PERCENT_MAX) ? 1.0 : (floatVal / PERCENT_MAX);
-    }
+
 
     //
-    // Calculate ratio of steps vs goal (clamped 0.0 to 1.0)
-    //
     function getStepRatio(steps as $.Toybox.Lang.Numeric?, goal as $.Toybox.Lang.Numeric?) as $.Toybox.Lang.Float {
-        if (steps == null || goal == null || goal == 0) { return 0.0; }
-        var ratio = steps.toFloat() / goal.toFloat();
+        if (steps == null) { return 0.0; }
+        var activeGoal = (goal != null && goal > 0) ? goal.toFloat() : 10000.0;
+        var ratio = steps.toFloat() / activeGoal;
         return (ratio > 1.0) ? 1.0 : ratio;
     }
 

@@ -13,7 +13,6 @@ class FaceComplications {
     // Data State
     public var batteryLevel as Float = 0.0;
     public var batteryRatio as Float = 0.0;
-    public var solarRatio as Float = 0.0;
     public var stepRatio as Float = 0.0;
     public var hrValue as Number = -1;
     public var hrStr as String = FaceLogic.STR_DASHES;
@@ -23,7 +22,6 @@ class FaceComplications {
     public var needsBackgroundRedraw as Boolean = false;
 
     // Complication IDs
-    public var _idSolar as Complications.Id? = null;
     public var _idSteps as Complications.Id? = null;
     public var _idBattery as Complications.Id? = null;
     public var _idHR as Complications.Id? = null;
@@ -32,13 +30,12 @@ class FaceComplications {
     function initialize() {
         Complications.registerComplicationChangeCallback(self.method(:onComplicationChanged));
         
-        _idSolar = new Complications.Id(Complications.COMPLICATION_TYPE_SOLAR_INPUT);
         _idSteps = new Complications.Id(Complications.COMPLICATION_TYPE_STEPS);
         _idBattery = new Complications.Id(Complications.COMPLICATION_TYPE_BATTERY);
         _idHR = new Complications.Id(Complications.COMPLICATION_TYPE_HEART_RATE);
         _idWeatherTemp = new Complications.Id(Complications.COMPLICATION_TYPE_CURRENT_TEMPERATURE);
 
-        var ids = [_idSolar, _idSteps, _idBattery, _idHR, _idWeatherTemp];
+        var ids = [_idSteps, _idBattery, _idHR, _idWeatherTemp];
         for (var i = 0; i < ids.size(); i++) {
             try {
                 Complications.subscribeToUpdates(ids[i]);
@@ -59,20 +56,26 @@ class FaceComplications {
     // Handle Complication Data Updates
     //
     function onComplicationChanged(id as Complications.Id) as Void {
-        var complication = Complications.getComplication(id);
+        var settings = $.Toybox.System.getDeviceSettings();
+        if (settings.doNotDisturb) { return; }
+
+        var complication = Complications.getComplication(id) as $.Toybox.Complications.Complication?;
+        if (complication == null) { return; }
         var val = complication.value;
         if (val == null) { return; }
 
-        if (id.equals(_idSolar)) {
-            solarRatio = $.FaceLogic.getSolarRatio(val as $.Toybox.Lang.Numeric);
-            needsBackgroundRedraw = true;
-        } else if (id.equals(_idSteps)) {
+        updateComplicationValue(id, val);
+        $.Toybox.WatchUi.requestUpdate();
+    }
+
+    //
+    // Internal helper to update internal state from complication values
+    //
+    private function updateComplicationValue(id as Complications.Id, val as $.Toybox.Lang.Object) as Void {
+        if (id.equals(_idSteps)) {
             var info = $.Toybox.ActivityMonitor.getInfo();
-            if (info != null) {
-                stepRatio = $.FaceLogic.getStepRatio(val as $.Toybox.Lang.Numeric, info.stepGoal);
-            } else {
-                stepRatio = 0.0;
-            }
+            var goal = (info != null) ? info.stepGoal : null;
+            stepRatio = $.FaceLogic.getStepRatio(val as $.Toybox.Lang.Numeric, goal);
             needsBackgroundRedraw = true;
         } else if (id.equals(_idBattery)) {
             batteryLevel = (val as $.Toybox.Lang.Numeric).toFloat();
@@ -87,30 +90,23 @@ class FaceComplications {
         } else if (id.equals(_idWeatherTemp)) {
             tempStr = $.FaceLogic.getTempString(val as $.Toybox.Lang.Numeric);
         }
-        
-        $.Toybox.WatchUi.requestUpdate();
     }
 
     //
-    // Periodically refresh data from system as fallback (every 5 mins)
+    // Force immediate data sync from all complications when waking up
     //
-    public function updateSystemStatsFallback() as Void {
-        var stats = $.Toybox.System.getSystemStats();
-        batteryLevel = stats.battery;
-        batteryRatio = batteryLevel / $.FaceLogic.PERCENT_MAX;
-        
-        solarRatio = $.FaceLogic.getSolarRatio(stats.solarIntensity);
-
-        var info = $.Toybox.ActivityMonitor.getInfo();
-        if (info != null) {
-            stepRatio = $.FaceLogic.getStepRatio(info.steps, info.stepGoal);
-        } else {
-            stepRatio = 0.0;
-        }
-
-        var weather = $.Toybox.Weather.getCurrentConditions();
-        if (weather != null) {
-            tempStr = $.FaceLogic.getTempString(weather.temperature);
+    public function refreshFromComplications() as Void {
+        var ids = [_idSteps, _idBattery, _idHR, _idWeatherTemp];
+        for (var i = 0; i < ids.size(); i++) {
+            var id = ids[i];
+            if (id != null) {
+                var complication = Complications.getComplication(id) as $.Toybox.Complications.Complication?;
+                if (complication != null && complication.value != null) {
+                    updateComplicationValue(id, complication.value as $.Toybox.Lang.Object);
+                }
+            }
         }
     }
+
+
 }

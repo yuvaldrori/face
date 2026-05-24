@@ -17,7 +17,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     
     public var _hour as $.Toybox.Lang.Number = 0;
     public var _min as $.Toybox.Lang.Number = 0;
-    public var _lastFallbackMinute as $.Toybox.Lang.Number = -1;
 
     public var _lastTimeStr as $.Toybox.Lang.String = "";
     public var _timeWidths as $.Toybox.Lang.Array<$.Toybox.Lang.Number> = [] as $.Toybox.Lang.Array<$.Toybox.Lang.Number>;
@@ -42,7 +41,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     private const RING_WIDTH = $.LayoutGenerated.RING_WIDTH;
     
     // Static Background Buffer (Track arcs)
-    private var _staticBuffer as $.Toybox.Graphics.BufferedBitmapReference? = null;
+    public var _staticBuffer as $.Toybox.Graphics.BufferedBitmapReference? = null;
     private var _lastBufferMinute as $.Toybox.Lang.Number = -1;
     private var _hugeFont as $.Toybox.Graphics.VectorFont? = null;
     private var _hugeFontHeight as $.Toybox.Lang.Number = 0;
@@ -72,7 +71,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     //
     // Initialize the off-screen buffer for static elements
     //
-    private function initializeStaticBuffer() as Void {
+    public function initializeStaticBuffer() as Void {
         if (_staticBuffer != null && _staticBuffer.get() != null) { return; }
         _staticBuffer = $.Toybox.Graphics.createBufferedBitmap({
             :width => $.LayoutGenerated.WIDTH,
@@ -85,6 +84,9 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     // Main Rendering Loop (1Hz Update)
     //
     function onUpdate(dc as $.Toybox.Graphics.Dc) as Void {
+        if (_staticBuffer == null || _staticBuffer.get() == null) {
+            initializeStaticBuffer();
+        }
         dc.setAntiAlias(false);
         dc.clearClip();
         
@@ -197,9 +199,9 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         dc.setColor(COLOR_MAIN, $.Toybox.Graphics.COLOR_TRANSPARENT);
         dc.drawText($.LayoutGenerated.HR_TEXT_X, Y_HR, FONT_SMALL, _data.hrStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
         
-        // Temperature Only
+        // Temperature Centered
         dc.setColor(mainColor, $.Toybox.Graphics.COLOR_TRANSPARENT);
-        dc.drawText($.LayoutGenerated.TEMP_X, $.LayoutGenerated.Y_WEATHER, FONT_SMALL, _data.tempStr, $.Toybox.Graphics.TEXT_JUSTIFY_LEFT);
+        dc.drawText($.LayoutGenerated.CX, $.LayoutGenerated.Y_WEATHER, FONT_SMALL, _data.tempStr, $.Toybox.Graphics.TEXT_JUSTIFY_CENTER);
 
         dc.setAntiAlias(false);
     }
@@ -224,9 +226,9 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         
         // HR Group
         var hrTextW = dc.getTextWidthInPixels(_data.hrStr, FONT_SMALL);
-        var totalHrW = $.LayoutGenerated.HR_ICON_W + $.LayoutGenerated.HR_GAP + hrTextW;
-        var hrStartX = CX - (totalHrW / 2);
-        dc.drawRectangle(hrStartX, Y_HR, totalHrW, dc.getFontHeight(FONT_SMALL));
+        var hrLeft = $.LayoutGenerated.HEART_LOBE_L_X - $.LayoutGenerated.HEART_LOBE_R;
+        var hrWidth = ($.LayoutGenerated.HR_TEXT_X + hrTextW) - hrLeft;
+        dc.drawRectangle(hrLeft, Y_HR, hrWidth, dc.getFontHeight(FONT_SMALL));
 
         // Temperature Group
         var tempTextW = dc.getTextWidthInPixels(_data.tempStr, FONT_SMALL);
@@ -250,12 +252,6 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
     public function updateLongTermData(clockTime as $.Toybox.System.ClockTime, dc as $.Toybox.Graphics.Dc) as Void {
         _hour = clockTime.hour as $.Toybox.Lang.Number;
         _min = clockTime.min as $.Toybox.Lang.Number;
-        
-        // Periodically refresh data from system as fallback (every 5 mins)
-        if (_lastFallbackMinute == -1 || (_min % 5 == 0 && _lastFallbackMinute != _min)) {
-            _lastFallbackMinute = _min;
-            _data.updateSystemStatsFallback();
-        }
     }
 
     function onEnterSleep() as Void { _isSleepMode = true; _lastUpdateMinute = -1; $.Toybox.WatchUi.requestUpdate(); }
@@ -263,6 +259,7 @@ class FaceView extends $.Toybox.WatchUi.WatchFace {
         _isSleepMode = false; 
         _lastUpdateMinute = -1; 
         _lastBufferMinute = -1; // Force background redraw when waking up
+        _data.refreshFromComplications(); // Query latest values immediately on wake
         $.Toybox.WatchUi.requestUpdate(); 
     }
 }

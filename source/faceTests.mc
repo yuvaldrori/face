@@ -119,8 +119,11 @@ function testStepRatio(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean 
     // 4. Null steps
     $.Toybox.Test.assertEqual($.FaceLogic.getStepRatio(null, 10000), 0.0);
     
-    // 5. Zero goal
-    $.Toybox.Test.assertEqual($.FaceLogic.getStepRatio(5000, 0), 0.0);
+    // 5. Zero goal (should fall back to 10000.0)
+    $.Toybox.Test.assertEqual($.FaceLogic.getStepRatio(5000, 0), 0.5);
+    
+    // 6. Null goal (should fall back to 10000.0)
+    $.Toybox.Test.assertEqual($.FaceLogic.getStepRatio(5000, null), 0.5);
     
     return true;
 }
@@ -188,22 +191,11 @@ function testMainDcSmoothness(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.B
 // Verify solar ratio calculation under various edge cases
 //
 (:test)
-function testSolarRatio(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    // 1. Normal case
-    $.Toybox.Test.assertEqual($.FaceLogic.getSolarRatio(50), 0.5);
-    
-    // 2. Max intensity
-    $.Toybox.Test.assertEqual($.FaceLogic.getSolarRatio(100), 1.0);
-    
-    // 3. Over intensity (should clamp)
-    $.Toybox.Test.assertEqual($.FaceLogic.getSolarRatio(120), 1.0);
-    
-    // 4. Null value
-    $.Toybox.Test.assertEqual($.FaceLogic.getSolarRatio(null), 0.0);
-    
-    // 5. Negative value (should clamp to 0)
-    $.Toybox.Test.assertEqual($.FaceLogic.getSolarRatio(-10), 0.0);
-    
+function testStaticBufferRecovery(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
+    var view = new $.FaceView();
+    view._staticBuffer = null;
+    view.initializeStaticBuffer();
+    $.Toybox.Test.assert(view._staticBuffer != null);
     return true;
 }
 
@@ -385,39 +377,7 @@ function testLayoutConstants(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Bo
     return true;
 }
 
-//
-// Verify that the the throttled fallback logic only fires at appropriate intervals
-//
-(:test)
-function testThrottledFallback(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    var view = new $.FaceView();
-    var mockDc = new MockDc();
-    
-    // Initial state
-    $.Toybox.Test.assertEqual(view._lastFallbackMinute, -1);
-    
-    // Minute 1: Should fire
-    var time1 = $.Toybox.Time.Gregorian.info($.Toybox.Time.now(), $.Toybox.Time.FORMAT_SHORT);
-    time1.min = 1;
-    view.updateLongTermData(time1 as $.Toybox.System.ClockTime, mockDc as $.Toybox.Graphics.Dc);
-    
-    // Test Initial Fire
-    $.Toybox.Test.assertEqual(view._lastFallbackMinute, 1);
-    
-    // Minute 2: Should NOT fire
-    var time2 = $.Toybox.Time.Gregorian.info($.Toybox.Time.now(), $.Toybox.Time.FORMAT_SHORT);
-    time2.min = 2;
-    view.updateLongTermData(time2 as $.Toybox.System.ClockTime, mockDc as $.Toybox.Graphics.Dc);
-    $.Toybox.Test.assertEqual(view._lastFallbackMinute, 1);
-    
-    // Minute 5: Should fire
-    var time5 = $.Toybox.Time.Gregorian.info($.Toybox.Time.now(), $.Toybox.Time.FORMAT_SHORT);
-    time5.min = 5;
-    view.updateLongTermData(time5 as $.Toybox.System.ClockTime, mockDc as $.Toybox.Graphics.Dc);
-    $.Toybox.Test.assertEqual(view._lastFallbackMinute, 5);
-    
-    return true;
-}
+
 
 //
 // Verify that the static buffer palette is complete for all rendered elements
@@ -491,7 +451,6 @@ function testRequiredSymbols(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Bo
     $.Toybox.Test.assert($.Toybox has :Complications);
 
     // 2. Critical Complication Constants
-    $.Toybox.Test.assert($.Toybox.Complications has :COMPLICATION_TYPE_SOLAR_INPUT);
     $.Toybox.Test.assert($.Toybox.Complications has :COMPLICATION_TYPE_STEPS);
     $.Toybox.Test.assert($.Toybox.Complications has :COMPLICATION_TYPE_BATTERY);
     $.Toybox.Test.assert($.Toybox.Complications has :COMPLICATION_TYPE_HEART_RATE);
@@ -527,22 +486,7 @@ function testSleepModeUI(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolea
     return true;
 }
 
-//
-// Verify FaceComplications fallback acquisition
-//
-(:test)
-function testFaceComplicationsFallback(logger as $.Toybox.Test.Logger) as $.Toybox.Lang.Boolean {
-    var comps = new $.FaceComplications();
-    
-    // Test that the method runs without crashing in test environment
-    comps.updateSystemStatsFallback();
-    
-    // In test environment, system stats might be zeroed out or fixed,
-    // but we verify the method is accessible and populates internal state.
-    $.Toybox.Test.assert(comps.batteryLevel != null);
-    
-    return true;
-}
+
 
 //
 // Smoke test for the View lifecycle: Verify that data acquisition logic does not crash
